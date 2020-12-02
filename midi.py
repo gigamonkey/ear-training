@@ -80,6 +80,24 @@ class Chord(Playable):
             yield NoteOff(p, t)
 
 
+class Line:
+
+    def __init__(self):
+        self.playables = []
+
+    def note(self, pitch, duration=1, velocity=127):
+        self.playables.append(Note(duration, pitch, velocity))
+        return self
+
+    def rest(self, duration=1):
+        self.playables.append(Rest(duration))
+        return self
+
+    def chord(self, pitches, duration=1, velocity=127):
+        self.playables.append(Chord(duration, pitches, velocity))
+        return self
+
+
 class Rest(Playable):
 
     pass
@@ -153,8 +171,8 @@ if __name__ == "__main__":
 
     quarter_triplet = triplet(1)
 
-    click = [Note(quarter_triplet/2, 60 + 36, 127), Rest(quarter_triplet/2)] * 6
-    midi = [Note(1, 60 - 12, 127), Rest(1), Chord(2, [60, 64, 67], 120)]
+    click = Line().note(96, duration=quarter_triplet/2).rest(quarter_triplet/2).playables * 6
+    midi = Line().note(60 - 12).rest().chord([60, 64, 67], duration=2, velocity=120).playables
 
     together = parallel([click, midi], 120.0)
 
