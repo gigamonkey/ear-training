@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from midi import Chord, play, sequence
+
 from itertools import islice
 from time import sleep
 import sys
@@ -21,26 +23,9 @@ class Progression:
         self.progression = progression
         self.scale = scale
 
-    def play(self, midi_out, root, time):
-        for c in self.progression.split("-"):
-            play_chord(midi_out, triad(root, self.scale, chords[c.lower()]), time)
-
-
-def play_chord(midi_out, notes, time):
-    for n in notes:
-        midi_out.note_on(n, 127)
-
-    sleep(time)
-
-    for n in notes:
-        midi_out.note_off(n)
-
-
-def play_melody(midi_out, notes, time):
-    for n in notes:
-        midi_out.note_on(n, 127)
-        sleep(time)
-        midi_out.note_off(n)
+    def play(self, midi_out, root, bpm):
+        pitches = [triad(root, self.scale, chords[c.lower()]) for c in self.progression.split("-")]
+        play(midi_out, sequence([Chord(1, c, 127) for c in pitches], bpm))
 
 
 def notes(root, one_octave):
@@ -72,8 +57,8 @@ def run(device_id=None):
     try:
         midi_out.set_instrument(0)
 
-        Progression("I-IV-V-I").play(midi_out, 60, 0.7)
-        # Progression("I-ii-iii-IV-V-vi-vii-I").play(midi_out, 60, 0.7)
+        Progression("I-IV-V-I").play(midi_out, 60, 120)
+        Progression("I-ii-iii-IV-V-vi-vii-I").play(midi_out, 60, 180)
 
     finally:
         del midi_out

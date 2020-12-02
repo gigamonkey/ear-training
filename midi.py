@@ -56,7 +56,10 @@ class Playable:
 class Note(Playable):
 
     pitch: int
-    velocity: int
+    velocity: int = 127
+
+    def transpose(self, steps):
+        return Note(self.duration, self.pitch + steps, self.velocity)
 
     def note_ons(self, t):
         yield NoteOn(self.pitch, self.velocity, t)
@@ -71,6 +74,9 @@ class Chord(Playable):
     pitches: List[int]
     velocity: int
 
+    def transpose(self, steps):
+        return Chord(self.duration, [p + steps for p in self.pitches], velocity)
+
     def note_ons(self, t):
         for p in self.pitches:
             yield NoteOn(p, self.velocity, t)
@@ -82,8 +88,19 @@ class Chord(Playable):
 
 class Line:
 
-    def __init__(self):
-        self.playables = []
+    def __init__(self, playables = None):
+        self.playables = playables or []
+
+    def __iter__(self):
+        return iter(self.playables)
+
+    def __add__(self, other):
+        return Line(self.playables + other.playables)
+
+    def transpose(self, steps):
+        l = Line()
+        l.playables = [x.transpose(steps) for x in self.playables]
+        return l
 
     def note(self, pitch, duration=1, velocity=127):
         self.playables.append(Note(duration, pitch, velocity))
@@ -100,7 +117,8 @@ class Line:
 
 class Rest(Playable):
 
-    pass
+    def transpose(self, steps):
+        return self
 
 
 def play(midi_out, events):
@@ -162,9 +180,19 @@ def merge(iterables, key):
         yield o
         insert_next(s)
 
+
+def tuplet(base, numerator, denominator):
+    """
+    Define a tuplet duration as numerator notes in the duration of
+    denominator. E.g. a eight-note triplet is three notes in the space
+    of two eight notes.
+    """
+
+    return (base * denominator) / numerator
+
 def triplet(base):
 
-    return (base * 2) / 3
+    return tuplet(base, 3, 2)
 
 
 if __name__ == "__main__":
@@ -174,7 +202,6 @@ if __name__ == "__main__":
     click = Line().note(96, duration=quarter_triplet/2).rest(quarter_triplet/2).playables * 6
     midi = Line().note(60 - 12).rest().chord([60, 64, 67], duration=2, velocity=120).playables
 
-    together = parallel([click, midi], 120.0)
 
     pygame.init()
     pygame.midi.init()
@@ -187,7 +214,6 @@ if __name__ == "__main__":
         midi_out.set_instrument(0)
 
         play(midi_out, parallel([click, midi], 120.0))
-        play(midi_out, parallel([click, midi], 180.0))
 
     finally:
         del midi_out
