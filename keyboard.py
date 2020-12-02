@@ -62,6 +62,7 @@ def run(device_id=None):
                 if e := key_mapping.get(e.scancode):
                     note, velocity = e
                     if note not in on_notes:
+                        print(note)
                         midi_out.note_on(note, velocity)
                         on_notes.add(note)
 
