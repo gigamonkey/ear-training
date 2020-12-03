@@ -13,14 +13,15 @@ from midi import sequence
 
 size = (300, 500)
 
+initial_button_color = (127, 127, 255)
+
+wrong_button_color = (64, 64, 255)
+
 # Played when we get it right.
 chirp = Line([Note(1 / 16, 96 + n) for n in (0, 5, 7, 12, 17, 19, 24)]).note(60, 1, 0)
 
 # Played when we get it wrong.
 blat = Line().chord([30, 31, 32, 33, 34], 1 / 8).note(60, 2, 0)
-
-initial_button_color = (127, 127, 255)
-wrong_button_color = (64, 64, 255)
 
 
 class Button:
@@ -94,6 +95,7 @@ class Quiz:
         self.name = name
 
     def make_universe(self):
+        "Make the universe from which make_questions will create a set of questions."
         pass
 
     def make_questions(self, universe):
