@@ -26,9 +26,9 @@ wrong_button_color = (64, 64, 255)
 
 
 class Question:
-    def __init__(self, name, pattern):
-        self.label = name
-        self.chord = ChordType(name, pattern)
+    def __init__(self, label, pattern):
+        self.label = label
+        self.chord = ChordType(label, pattern)
 
     def play(self, midi_out):
         play(midi_out, self.chord.render_chord(60, 120))
@@ -103,16 +103,22 @@ def get_answer(buttons, question, midi_out):
                     return True, b.question
 
 
-def run():
+def make_universe():
+    return [Question(name, pattern) for name, pattern in chord_types.items()]
 
-    questions = [Question(name, pattern) for name, pattern in chord_types.items()]
+
+def make_quiz(questions):
+    return questions
+
+
+def run(name, universe):
 
     pygame.init()
     pygame.midi.init()
 
     font = pygame.freetype.SysFont("helveticaneue", 32)
 
-    pygame.display.set_caption("Chord types")
+    pygame.display.set_caption(name)
 
     screen = pygame.display.set_mode(size)
 
@@ -134,8 +140,8 @@ def run():
         while running:
 
             if not wrong:
-                question = random.choice(questions)
-                quiz = questions
+                quiz = make_quiz(universe)
+                question = random.choice(quiz)
 
             # Draw the screen with the buttons.
             screen.blit(background, (0, 0))
@@ -167,4 +173,4 @@ def run():
 
 if __name__ == "__main__":
 
-    run()
+    run("Chord types", make_universe())

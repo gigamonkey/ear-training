@@ -26,9 +26,22 @@ initial_button_color = (127, 127, 255)
 wrong_button_color = (64, 64, 255)
 
 
-class Button:
-    def __init__(self, label, pos, size, is_wrong):
+class Question:
+    def __init__(self, label, progression):
         self.label = label
+        self.progression = progression
+        self.midi = self.progression.render(60, random_voicing, 120)
+
+    def play(self, midi_out):
+        play(midi_out, self.midi)
+
+    def hint(self, midi_out):
+        self.play(midi_out)
+
+
+class Button:
+    def __init__(self, question, pos, size, is_wrong):
+        self.question = question
         self.rect = pygame.Rect(pos, size)
         self.is_wrong = is_wrong
 
@@ -39,13 +52,16 @@ class Button:
             initial_button_color if not self.is_wrong else wrong_button_color,
             pygame.Rect(0, 0, self.rect.width, self.rect.height),
         )
-        text, text_rect = font.render(self.label, (0, 0, 0))
+        text, text_rect = font.render(self.question.label, (0, 0, 0))
 
         x = (self.rect.width - text_rect.width) / 2
         y = (self.rect.height - text_rect.height) / 2
 
         surface.blit(text, (x, y))
         screen.blit(surface, (self.rect.x, self.rect.y))
+
+    def is_hit(self, pos):
+        return self.rect.collidepoint(pos)
 
 
 def is_quit(e):
@@ -58,67 +74,69 @@ def is_replay(e):
     return e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE
 
 
-def render_buttons(surface, labels, rect, font, wrong, gap=5):
+def is_replay_with_hint(e):
+    return e.type == pygame.KEYDOWN and e.key in {pygame.K_a, pygame.K_h}
 
-    h = ((rect.height + gap) / len(labels)) - gap
 
-    buttons = [
-        Button(label, (0, i * (h + gap)), (rect.width, h), label in wrong)
-        for i, label in enumerate(labels)
-    ]
-    for b in buttons:
+def render_buttons(surface, quiz, rect, font, wrong, gap=5):
+
+    h = ((rect.height + gap) / len(quiz)) - gap
+
+    def make_button(q, i):
+        b = Button(q, (0, i * (h + gap)), (rect.width, h), q.label in wrong)
         b.render(surface, font)
+        return b
 
-    return buttons
-
-
-def four_chord_progressions():
-    return [Progression((0,) + p + (0,)) for p in permutations(range(1, 7), 2)]
+    return [make_button(q, i) for i, q in enumerate(quiz)]
 
 
-def get_answer(buttons, replay):
+def get_answer(buttons, question, midi_out):
     while True:
         event = pygame.event.wait()
         if is_quit(event):
             return False, None
         elif is_replay(event):
-            replay()
+            question.play(midi_out)
+        elif is_replay_with_hint(event):
+            question.hint(midi_out)
         elif event.type == pygame.MOUSEBUTTONDOWN:
             for b in buttons:
-                if b.rect.collidepoint(event.pos):
-                    return True, b.label
+                if b.is_hit(event.pos):
+                    return True, b.question
 
 
-def choices(to_play):
-    a, b = to_play.progression[1:3]
+def make_universe():
+    return [Progression((0,) + p + (0,)) for p in permutations(range(1, 7), 2)]
+
+
+def make_quiz(progressions):
+
+    seed = random.choice(progressions)
+
+    def p(x, y):
+        return Progression((0, x, y, 0), seed.scale)
+
+    a, b = seed.progression[1:3]
     fake_a, fake_b = random.sample(set(range(1, 7)) - {a, b}, 2)
-    ps = [
-        Progression((0, a, b, 0), to_play.scale),
-        Progression((0, fake_a, b, 0), to_play.scale),
-        Progression((0, a, fake_b, 0), to_play.scale),
-        Progression((0, fake_a, fake_b, 0), to_play.scale),
-    ]
+
+    ps = [seed, p(fake_a, b), p(a, fake_b), p(fake_a, fake_b)]
     random.shuffle(ps)
-    return ps
+    return [Question(p.name(), p) for p in ps]
 
 
-def run():
-
-    progressions = four_chord_progressions()
+def run(name, universe):
 
     pygame.init()
     pygame.midi.init()
 
-    font = pygame.freetype.SysFont(pygame.freetype.get_default_font(), 32)
+    font = pygame.freetype.SysFont("helveticaneue", 32)
 
-    pygame.display.set_caption("Progressions")
+    pygame.display.set_caption(name)
 
     screen = pygame.display.set_mode(size)
 
     background = pygame.Surface(size)
     background.fill(pygame.Color("#dddddd"))
-
-    pygame.time.Clock()
 
     pygame.event.set_blocked(pygame.MOUSEMOTION)
 
@@ -135,41 +153,37 @@ def run():
         while running:
 
             if not wrong:
-                # New question
-                to_play = random.choice(progressions)
-                quiz = choices(to_play)
-                midi = to_play.render(60, random_voicing, 120)
-
-                def play_progression():
-                    play(midi_out, midi)
+                quiz = make_quiz(universe)
+                question = random.choice(quiz)
 
             # Draw the screen with the buttons.
             screen.blit(background, (0, 0))
             buttons = render_buttons(
-                screen, [str(p) for p in quiz], pygame.Rect(0, 0, 300, 500), font, wrong
+                screen, quiz, pygame.Rect(0, 0, 300, 500), font, wrong
             )
             pygame.display.update()
 
             # Play the progression
             pygame.event.clear()
-            play_progression()
+            question.play(midi_out)
 
             # Wait for events until we get a button click; check the answer.
-            running, answer = get_answer(buttons, play_progression)
-
+            running, choice = get_answer(buttons, question, midi_out)
             if running:
-                if answer == to_play.name():
+                if choice == question:
                     play(midi_out, sequence(chirp, 120))
                     wrong = set()
                 else:
-                    play(midi_out, sequence(blat, 120))
-                    wrong.add(answer)
+                    if choice.label in wrong:
+                        choice.play(midi_out)
+                    else:
+                        play(midi_out, sequence(blat, 120))
+                        wrong.add(choice.label)
 
     finally:
-        del midi_out
         pygame.midi.quit()
 
 
 if __name__ == "__main__":
 
-    run()
+    run("Progressions", make_universe())
