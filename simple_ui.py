@@ -1,6 +1,11 @@
+import random
 from dataclasses import dataclass
+from itertools import permutations, product
+
 import pygame
 import pygame.freetype
+
+from chords import Progression
 
 size = (300, 500)
 
@@ -38,11 +43,6 @@ class Button:
         surface.blit(text, (x, y))
         screen.blit(surface, (self.rect.x, self.rect.y))
 
-
-button1 = Button("I-IV-V-I", (0, 0), (300, 100))
-button2 = Button("I-ii-vi-I", (0, 110), (300, 100))
-
-
 def is_quit(e):
     return e.type == pygame.QUIT or (
         e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE
@@ -51,14 +51,7 @@ def is_quit(e):
 
 def render_buttons(surface, labels, rect, gap=5):
 
-    num = len(labels)
-
-    # (num * h) + ((num - 1) * gap) = rect.height
-    # (num * h) + (num * gap) - gap = rect.height
-    # (num * h) + (num * gap) = rect.height + gap
-    # num * (h + gap) = rect.height + gap
-    # h + gap = (rect.height + gap) / num
-    h = ((rect.height + gap) / num) - gap
+    h = ((rect.height + gap) / len(labels)) - gap
 
     buttons = [
         Button(label, (0, i * (h + gap)), (rect.width, h))
@@ -66,9 +59,18 @@ def render_buttons(surface, labels, rect, gap=5):
     ]
     for b in buttons:
         b.render(surface)
-        # surface.blit(b.render(), (b.rect.x, b.rect.y))
 
     return buttons
+
+
+def four_chord_progressions():
+    return [
+        Progression((0,) + p + (0,)) for p in permutations(range(1, 7), 2)
+    ]
+
+all_progressions = four_chord_progressions()
+
+quiz = random.sample(four_chord_progressions(), 4)
 
 
 pygame.event.set_blocked(pygame.MOUSEMOTION)
@@ -89,7 +91,7 @@ while running:
 
     buttons = render_buttons(
         window_surface,
-        ("I-IV-V-I", "I-ii-vi-I", "I-iii-V-I"),
+        [str(p) for p in quiz],
         pygame.Rect(0, 0, 300, 500),
     )
 

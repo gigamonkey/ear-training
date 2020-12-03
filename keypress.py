@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import sys
 import os
+import sys
 
 import pygame as pg
 import pygame.midi

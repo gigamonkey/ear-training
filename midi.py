@@ -12,11 +12,12 @@ notes.
 """
 
 
+import time
 from dataclasses import dataclass
 from typing import List
+
 import pygame
 import pygame.midi
-import time
 
 
 @dataclass(frozen=True)

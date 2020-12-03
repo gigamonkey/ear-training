@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
-import sys
 import os
+import sys
 
 import pygame
 import pygame.midi
-
 
 # Keycodes ignoring keybooard layout.
 

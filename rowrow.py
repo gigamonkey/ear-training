@@ -1,6 +1,7 @@
-from midi import *
 import pygame
 import pygame.midi
+
+from midi import *
 
 if __name__ == "__main__":
 
