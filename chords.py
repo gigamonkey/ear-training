@@ -60,18 +60,30 @@ class Progression:
         triads = [Chord(1, triad(root, self.scale, d)) for d in self.progression]
         play(midi_out, sequence(triads, bpm))
 
-    def play_random_bass(self, midi_out, root, bpm):
-        triads = [Chord(1, triad(root, self.scale, d)) for d in self.progression]
-        bass = [Note(1, random.choice(c.pitches) - 12) for c in triads]
-        play(midi_out, parallel([triads, bass], bpm))
+    def render(self, root, voicing, bpm):
+        return list(
+            sequence(
+                [Chord(1, voicing(root, self.scale, d)) for d in self.progression], bpm
+            )
+        )
 
-    def play_random_voicing(self, midi_out, root, bpm):
-        triads = [list(triad(root, self.scale, d)) for d in self.progression]
-        for t in triads:
-            random.shuffle(t)
-            t.append(random.choice(t) - 12)
-            t.append(random.choice(t) + 12)
-        play(midi_out, sequence([Chord(1, t) for t in triads], bpm))
+
+def random_voicing(root, scale, d):
+    t = triad(root, scale, d)
+    t = random_inversion(t)
+    t.append(random.choice(t) - 12)
+    t.append(random.choice(t) + 12)
+    if random.choice((True, False)):
+        t = [n - 12 for n in t]
+    return t
+
+
+def random_inversion(notes):
+    # (0, 3, 7) -> (0, 3, 7)
+    # (0, 3, 7) -> (3, 7, 12)
+    # (0, 3, 7) -> (7, 12, 15)
+    inversion = random.randrange(len(notes))
+    return list(notes[inversion:]) + list(n + 12 for n in notes[:inversion])
 
 
 def notes(root, one_octave):

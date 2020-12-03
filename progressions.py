@@ -9,6 +9,7 @@ import pygame.freetype
 import pygame.midi
 
 from chords import Progression
+from chords import random_voicing
 from midi import Line
 from midi import Note
 from midi import play
@@ -91,9 +92,7 @@ def get_answer(buttons, replay):
 
 def choices(to_play):
     a, b = to_play.progression[1:3]
-    fakes = set(range(1, 7)) - {a, b}
-    fake_a = random.choice(list(fakes))
-    fake_b = random.choice(list(fakes - {fake_a}))
+    fake_a, fake_b = random.sample(set(range(1, 7)) - {a, b}, 2)
     ps = [
         Progression((0, a, b, 0), to_play.scale),
         Progression((0, fake_a, b, 0), to_play.scale),
@@ -140,9 +139,10 @@ def run():
                 # New question
                 to_play = random.choice(progressions)
                 quiz = choices(to_play)
+                midi = to_play.render(60, random_voicing, 120)
 
                 def play_progression():
-                    to_play.play_random_voicing(midi_out, 60, 120)
+                    play(midi_out, midi)
 
             # Draw the screen with the buttons.
             screen.blit(background, (0, 0))
