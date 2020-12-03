@@ -12,6 +12,14 @@ import pygame.midi
 
 chord_degrees = ("i", "ii", "iii", "iv", "v", "vi", "vii")
 
+triads = {
+    (3, 3): "diminished",
+    (3, 4): "minor",
+    (4, 3): "major",
+    (4, 4): "augmented",
+}
+
+
 chords = {s: i for i, s in enumerate(chord_degrees)}
 
 major_scale = (0, 2, 4, 5, 7, 9, 11)
@@ -24,7 +32,10 @@ class Progression:
         self.scale = scale
 
     def play(self, midi_out, root, bpm):
-        pitches = [triad(root, self.scale, chords[c.lower()]) for c in self.progression.split("-")]
+        pitches = [
+            triad(root, self.scale, chords[c.lower()])
+            for c in self.progression.split("-")
+        ]
         play(midi_out, sequence([Chord(1, c, 127) for c in pitches], bpm))
 
 
@@ -43,6 +54,11 @@ def triad(root, scale, degree):
     starting at the given degree of the scale.
     """
     return tuple(islice(notes(root, scale), degree, degree + 6, 2))
+
+
+def kind_of_triad(triad):
+    a, b, c = triad
+    return triads[(b - a, c - b)]
 
 
 def run(device_id=None):
