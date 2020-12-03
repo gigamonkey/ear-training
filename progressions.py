@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
+"Quiz of chord progressions."
+
 import random
+import sys
 from itertools import permutations
 
 from app import Quiz
@@ -10,8 +13,8 @@ from midi import play
 
 
 class Question:
-    def __init__(self, label, progression):
-        self.label = label
+    def __init__(self, progression):
+        self.label = progression.name()
         self.progression = progression
         self.midi = self.progression.render(60, random_voicing, 120)
 
@@ -23,24 +26,32 @@ class Question:
 
 
 class ProgressionQuiz(Quiz):
+    def __init__(self, name, number):
+        super().__init__(name)
+        self.number = number
+
     def make_universe(self):
-        return [Progression((0,) + p + (0,)) for p in permutations(range(1, 7), 2)]
+        return list(permutations(range(1, 7), self.number - 2))
 
-    def make_questions(self, progressions):
+    def make_questions(self, universe):
 
-        seed = random.choice(progressions)
+        seed = random.choice(universe)
+        subset = [m for m in universe if similar(seed, m)]
 
-        def p(x, y):
-            return Progression((0, x, y, 0), seed.scale)
+        random.shuffle(subset)
+        return [Question(make_progression(m)) for m in random.sample(subset, 4)]
 
-        a, b = seed.progression[1:3]
-        fake_a, fake_b = random.sample(set(range(1, 7)) - {a, b}, 2)
 
-        ps = [seed, p(fake_a, b), p(a, fake_b), p(fake_a, fake_b)]
-        random.shuffle(ps)
-        return [Question(p.name(), p) for p in ps]
+def make_progression(middle):
+    return Progression((0, *middle, 0))
+
+
+def similar(p1, p2):
+    return sum(x1 == x2 for x1, x2 in zip(p1, p2)) == (len(p1) - 1)
 
 
 if __name__ == "__main__":
 
-    ProgressionQuiz("Progressions").run()
+    num_chords = int(sys.argv[1]) if len(sys.argv) > 1 else 4
+
+    ProgressionQuiz("Progressions", num_chords).run()

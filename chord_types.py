@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+"Quiz of chord types."
 
 from app import Quiz
 from chords import ChordType
