@@ -20,17 +20,21 @@ chirp = Line([Note(1 / 16, 96 + n) for n in (0, 5, 7, 12, 17, 19, 24)]).note(60,
 # Played when we get it wrong.
 blat = Line().chord([30, 31, 32, 33, 34], 1 / 8).note(60, 2, 0)
 
+initial_button_color = (127, 127, 255)
+wrong_button_color = (64, 64, 255)
+
 
 class Button:
-    def __init__(self, label, pos, size):
+    def __init__(self, label, pos, size, is_wrong):
         self.label = label
         self.rect = pygame.Rect(pos, size)
+        self.is_wrong = is_wrong
 
     def render(self, screen, font):
         surface = pygame.Surface(self.rect.size)
         pygame.draw.rect(
             surface,
-            (127, 127, 255),
+            initial_button_color if not self.is_wrong else wrong_button_color,
             pygame.Rect(0, 0, self.rect.width, self.rect.height),
         )
         text, text_rect = font.render(self.label, (0, 0, 0))
@@ -49,15 +53,15 @@ def is_quit(e):
 
 
 def is_replay(e):
-    return event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE
+    return e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE
 
 
-def render_buttons(surface, labels, rect, font, gap=5):
+def render_buttons(surface, labels, rect, font, wrong, gap=5):
 
     h = ((rect.height + gap) / len(labels)) - gap
 
     buttons = [
-        Button(label, (0, i * (h + gap)), (rect.width, h))
+        Button(label, (0, i * (h + gap)), (rect.width, h), label in wrong)
         for i, label in enumerate(labels)
     ]
     for b in buttons:
@@ -110,20 +114,25 @@ def run():
         midi_out.set_instrument(0)
 
         running = True
+
+        wrong = set()
+
         while running:
 
-            # Make a quiz.
-            quiz = random.sample(progressions, 4)
-            random.shuffle(quiz)
-            to_play = random.choice(quiz)
+            if not wrong:
+                # Make a quiz.
+                quiz = random.sample(progressions, 4)
+                random.shuffle(quiz)
+                to_play = random.choice(quiz)
 
-            def play_progression():
-                to_play.play(midi_out, 60, 120)
+                def play_progression():
+                    to_play.play(midi_out, 60, 120)
+
 
             # Draw the screen with the buttons.
             screen.blit(background, (0, 0))
             buttons = render_buttons(
-                screen, [str(p) for p in quiz], pygame.Rect(0, 0, 300, 500), font
+                screen, [str(p) for p in quiz], pygame.Rect(0, 0, 300, 500), font, wrong
             )
             pygame.display.update()
 
@@ -137,8 +146,10 @@ def run():
             if running:
                 if answer == to_play.name():
                     play(midi_out, sequence(chirp, 120))
+                    wrong = set()
                 else:
                     play(midi_out, sequence(blat, 120))
+                    wrong.add(answer)
 
     finally:
         del midi_out
