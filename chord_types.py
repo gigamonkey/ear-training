@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
 import random
-from itertools import permutations
 
 import pygame
 import pygame.freetype
 import pygame.midi
 
-from chords import Progression
-from chords import random_voicing
+from chords import ChordType
+from chords import chord_types
 from midi import Line
 from midi import Note
 from midi import play
@@ -58,6 +57,10 @@ def is_replay(e):
     return e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE
 
 
+def is_replay_with_arepeggio(e):
+    return e.type == pygame.KEYDOWN and e.key == pygame.K_a
+
+
 def render_buttons(surface, labels, rect, font, wrong, gap=5):
 
     h = ((rect.height + gap) / len(labels)) - gap
@@ -72,46 +75,32 @@ def render_buttons(surface, labels, rect, font, wrong, gap=5):
     return buttons
 
 
-def four_chord_progressions():
-    return [Progression((0,) + p + (0,)) for p in permutations(range(1, 7), 2)]
-
-
-def get_answer(buttons, replay):
+def get_answer(buttons, replay, replay_with_arpeggio):
     while True:
         event = pygame.event.wait()
         if is_quit(event):
             return False, None
         elif is_replay(event):
             replay()
+        elif is_replay_with_arepeggio(event):
+            replay_with_arpeggio()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             for b in buttons:
                 if b.rect.collidepoint(event.pos):
                     return True, b.label
 
 
-def choices(to_play):
-    a, b = to_play.progression[1:3]
-    fake_a, fake_b = random.sample(set(range(1, 7)) - {a, b}, 2)
-    ps = [
-        Progression((0, a, b, 0), to_play.scale),
-        Progression((0, fake_a, b, 0), to_play.scale),
-        Progression((0, a, fake_b, 0), to_play.scale),
-        Progression((0, fake_a, fake_b, 0), to_play.scale),
-    ]
-    random.shuffle(ps)
-    return ps
-
-
 def run():
 
-    progressions = four_chord_progressions()
+    questions = [ChordType(name, pattern) for name, pattern in chord_types.items()]
 
     pygame.init()
     pygame.midi.init()
 
-    font = pygame.freetype.SysFont(pygame.freetype.get_default_font(), 32)
+    # font = pygame.freetype.SysFont(pygame.freetype.get_default_font(), 32)
+    font = pygame.freetype.SysFont("helveticaneue", 32)
 
-    pygame.display.set_caption("Progressions")
+    pygame.display.set_caption("Chord types")
 
     screen = pygame.display.set_mode(size)
 
@@ -136,12 +125,12 @@ def run():
 
             if not wrong:
                 # New question
-                to_play = random.choice(progressions)
-                quiz = choices(to_play)
-                midi = to_play.render(60, random_voicing, 120)
+                to_play = random.choice(questions)
+                quiz = questions
+                first_midi = to_play.render_chord(60, 120)
+                second_midi = to_play.render_arpeggio_and_chord(60, 120)
 
-                def play_progression():
-                    play(midi_out, midi)
+                play_question = lambda: play(midi_out, first_midi)
 
             # Draw the screen with the buttons.
             screen.blit(background, (0, 0))
@@ -152,13 +141,14 @@ def run():
 
             # Play the progression
             pygame.event.clear()
-            play_progression()
+            play_question()
 
             # Wait for events until we get a button click; check the answer.
-            running, answer = get_answer(buttons, play_progression)
-
+            running, answer = get_answer(
+                buttons, play_question, lambda: play(midi_out, second_midi)
+            )
             if running:
-                if answer == to_play.name():
+                if answer == str(to_play):
                     play(midi_out, sequence(chirp, 120))
                     wrong = set()
                 else:
@@ -166,7 +156,6 @@ def run():
                     wrong.add(answer)
 
     finally:
-        del midi_out
         pygame.midi.quit()
 
 
