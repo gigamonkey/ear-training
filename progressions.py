@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import random
 from itertools import permutations
 from itertools import product
@@ -87,6 +89,21 @@ def get_answer(buttons, replay):
                     return True, b.label
 
 
+def choices(to_play):
+    a, b = to_play.progression[1:3]
+    fakes = set(range(1, 7)) - {a, b}
+    fake_a = random.choice(list(fakes))
+    fake_b = random.choice(list(fakes - {fake_a}))
+    ps = [
+        Progression((0, a, b, 0), to_play.scale),
+        Progression((0, fake_a, b, 0), to_play.scale),
+        Progression((0, a, fake_b, 0), to_play.scale),
+        Progression((0, fake_a, fake_b, 0), to_play.scale),
+    ]
+    random.shuffle(ps)
+    return ps
+
+
 def run():
 
     progressions = four_chord_progressions()
@@ -120,10 +137,9 @@ def run():
         while running:
 
             if not wrong:
-                # Make a quiz.
-                quiz = random.sample(progressions, 4)
-                random.shuffle(quiz)
-                to_play = random.choice(quiz)
+                # New question
+                to_play = random.choice(progressions)
+                quiz = choices(to_play)
 
                 def play_progression():
                     to_play.play_random_voicing(midi_out, 60, 120)
