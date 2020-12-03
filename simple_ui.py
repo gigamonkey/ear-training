@@ -1,26 +1,24 @@
 import random
-from dataclasses import dataclass
-from itertools import permutations, product
+from itertools import permutations
+from itertools import product
 
 import pygame
 import pygame.freetype
+import pygame.midi
 
 from chords import Progression
+from midi import Line
+from midi import Note
+from midi import play
+from midi import sequence
 
 size = (300, 500)
 
-pygame.init()
+# Played when we get it right.
+chirp = Line([Note(1 / 16, 96 + n) for n in (0, 5, 7, 12, 17, 19, 24)]).note(60, 1, 0)
 
-pygame.display.set_caption("Quick Start")
-
-window_surface = pygame.display.set_mode(size)
-
-background = pygame.Surface(size)
-background.fill(pygame.Color("#dddddd"))
-
-clock = pygame.time.Clock()
-
-font = pygame.freetype.SysFont(pygame.freetype.get_default_font(), 32)
+# Played when we get it wrong.
+blat = Line().chord([30, 31, 32, 33, 34], 1 / 8).note(60, 2, 0)
 
 
 class Button:
@@ -28,7 +26,7 @@ class Button:
         self.label = label
         self.rect = pygame.Rect(pos, size)
 
-    def render(self, screen):
+    def render(self, screen, font):
         surface = pygame.Surface(self.rect.size)
         pygame.draw.rect(
             surface,
@@ -43,13 +41,18 @@ class Button:
         surface.blit(text, (x, y))
         screen.blit(surface, (self.rect.x, self.rect.y))
 
+
 def is_quit(e):
     return e.type == pygame.QUIT or (
-        e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE
+        e.type == pygame.KEYDOWN and (e.key in {pygame.K_ESCAPE, pygame.K_q})
     )
 
 
-def render_buttons(surface, labels, rect, gap=5):
+def is_replay(e):
+    return event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE
+
+
+def render_buttons(surface, labels, rect, font, gap=5):
 
     h = ((rect.height + gap) / len(labels)) - gap
 
@@ -58,41 +61,90 @@ def render_buttons(surface, labels, rect, gap=5):
         for i, label in enumerate(labels)
     ]
     for b in buttons:
-        b.render(surface)
+        b.render(surface, font)
 
     return buttons
 
 
 def four_chord_progressions():
-    return [
-        Progression((0,) + p + (0,)) for p in permutations(range(1, 7), 2)
-    ]
-
-all_progressions = four_chord_progressions()
-
-quiz = random.sample(four_chord_progressions(), 4)
+    return [Progression((0,) + p + (0,)) for p in permutations(range(1, 7), 2)]
 
 
-pygame.event.set_blocked(pygame.MOUSEMOTION)
-
-running = True
-
-while running:
-    time_delta = clock.tick(60) / 1000.0
-    for event in pygame.event.get():
+def get_answer(buttons, replay):
+    while True:
+        event = pygame.event.wait()
         if is_quit(event):
-            running = False
+            return False, None
+        elif is_replay(event):
+            replay()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             for b in buttons:
                 if b.rect.collidepoint(event.pos):
-                    print(b.label)
+                    return True, b.label
 
-    window_surface.blit(background, (0, 0))
 
-    buttons = render_buttons(
-        window_surface,
-        [str(p) for p in quiz],
-        pygame.Rect(0, 0, 300, 500),
-    )
+def run():
 
-    pygame.display.update()
+    progressions = four_chord_progressions()
+
+    pygame.init()
+    pygame.midi.init()
+
+    font = pygame.freetype.SysFont(pygame.freetype.get_default_font(), 32)
+
+    pygame.display.set_caption("Progressions")
+
+    screen = pygame.display.set_mode(size)
+
+    background = pygame.Surface(size)
+    background.fill(pygame.Color("#dddddd"))
+
+    pygame.time.Clock()
+
+    pygame.event.set_blocked(pygame.MOUSEMOTION)
+
+    port = pygame.midi.get_default_output_id()
+    midi_out = pygame.midi.Output(port, 0)
+
+    try:
+        midi_out.set_instrument(0)
+
+        running = True
+        while running:
+
+            # Make a quiz.
+            quiz = random.sample(progressions, 4)
+            random.shuffle(quiz)
+            to_play = random.choice(quiz)
+
+            def play_progression():
+                to_play.play(midi_out, 60, 120)
+
+            # Draw the screen with the buttons.
+            screen.blit(background, (0, 0))
+            buttons = render_buttons(
+                screen, [str(p) for p in quiz], pygame.Rect(0, 0, 300, 500), font
+            )
+            pygame.display.update()
+
+            # Play the progression
+            pygame.event.clear()
+            play_progression()
+
+            # Wait for events until we get a button click; check the answer.
+            running, answer = get_answer(buttons, play_progression)
+
+            if running:
+                if answer == to_play.name():
+                    play(midi_out, sequence(chirp, 120))
+                else:
+                    play(midi_out, sequence(blat, 120))
+
+    finally:
+        del midi_out
+        pygame.midi.quit()
+
+
+if __name__ == "__main__":
+
+    run()
