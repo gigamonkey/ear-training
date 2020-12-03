@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import random
+from itertools import permutations, product
 from midi import Chord, play, sequence
 
 from itertools import islice
@@ -19,6 +21,12 @@ triads = {
     (4, 4): "augmented",
 }
 
+roman = {
+    "major": str.upper,
+    "minor": str.lower,
+    "diminished": lambda d: d.lower() + "°",
+    "augmented": lambda d: d.upper + "⁺",
+}
 
 chords = {s: i for i, s in enumerate(chord_degrees)}
 
@@ -26,17 +34,31 @@ major_scale = (0, 2, 4, 5, 7, 9, 11)
 minor_scale = (0, 2, 3, 5, 7, 8, 10)
 
 
+def roman_letters(scale):
+    return [
+        roman[kind_of_triad(t)](chord_degrees[i])
+        for i, t in [(i, triad(0, scale, i)) for i in range(7)]
+    ]
+
+
 class Progression:
     def __init__(self, progression, scale=major_scale):
         self.progression = progression
         self.scale = scale
+        self.names = roman_letters(scale)
+
+    def name(self):
+        return str(self)
+
+    def __str__(self):
+        return "-".join(self.names[d] for d in self.progression)
 
     def play(self, midi_out, root, bpm):
-        pitches = [
-            triad(root, self.scale, chords[c.lower()])
-            for c in self.progression.split("-")
-        ]
-        play(midi_out, sequence([Chord(1, c, 127) for c in pitches], bpm))
+        p = sequence(
+            [Chord(1, triad(root, self.scale, degree)) for degree in self.progression],
+            bpm,
+        )
+        play(midi_out, p)
 
 
 def notes(root, one_octave):
@@ -51,7 +73,7 @@ def notes(root, one_octave):
 def triad(root, scale, degree):
     """
     Build a triad on the notes of the given scale, rooted at root,
-    starting at the given degree of the scale.
+    starting at the given zero-indexed degree of the scale.
     """
     return tuple(islice(notes(root, scale), degree, degree + 6, 2))
 
@@ -73,8 +95,13 @@ def run(device_id=None):
     try:
         midi_out.set_instrument(0)
 
-        Progression("I-IV-V-I").play(midi_out, 60, 120)
-        Progression("I-ii-iii-IV-V-vi-vii-I").play(midi_out, 60, 180)
+        all_progressions = [
+            p for p in permutations(range(7), 4) if p[0] == 0 or p[-1] == 0
+        ]
+
+        p = Progression(random.choice(all_progressions))
+        p.play(midi_out, 60, 120)
+        print(p)
 
     finally:
         del midi_out
