@@ -72,7 +72,7 @@ class Note(Playable):
 class Chord(Playable):
 
     pitches: List[int]
-    velocity: int
+    velocity: int = 127
 
     def transpose(self, steps):
         return Chord(self.duration, [p + steps for p in self.pitches], velocity)
