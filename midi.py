@@ -87,8 +87,7 @@ class Chord(Playable):
 
 
 class Line:
-
-    def __init__(self, playables = None):
+    def __init__(self, playables=None):
         self.playables = playables or []
 
     def __iter__(self):
@@ -116,7 +115,6 @@ class Line:
 
 
 class Rest(Playable):
-
     def transpose(self, steps):
         return self
 
@@ -190,6 +188,7 @@ def tuplet(base, numerator, denominator):
 
     return (base * denominator) / numerator
 
+
 def triplet(base):
 
     return tuplet(base, 3, 2)
@@ -199,9 +198,20 @@ if __name__ == "__main__":
 
     quarter_triplet = triplet(1)
 
-    click = Line().note(96, duration=quarter_triplet/2).rest(quarter_triplet/2).playables * 6
-    midi = Line().note(60 - 12).rest().chord([60, 64, 67], duration=2, velocity=120).playables
-
+    click = (
+        Line()
+        .note(96, duration=quarter_triplet / 2)
+        .rest(quarter_triplet / 2)
+        .playables
+        * 6
+    )
+    midi = (
+        Line()
+        .note(60 - 12)
+        .rest()
+        .chord([60, 64, 67], duration=2, velocity=120)
+        .playables
+    )
 
     pygame.init()
     pygame.midi.init()
