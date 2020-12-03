@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 
-import os
 import random
 import sys
-from itertools import islice, permutations, product
-from time import sleep
+from itertools import islice
+from itertools import permutations
+from itertools import product
 
 import pygame as pg
 import pygame.midi
 
-from midi import Chord, play, sequence
+from midi import Chord
+from midi import play
+from midi import sequence
 
 chord_degrees = ("i", "ii", "iii", "iv", "v", "vi", "vii")
 
