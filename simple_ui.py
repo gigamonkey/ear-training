@@ -126,8 +126,7 @@ def run():
                 to_play = random.choice(quiz)
 
                 def play_progression():
-                    to_play.play(midi_out, 60, 120)
-
+                    to_play.play_random_voicing(midi_out, 60, 120)
 
             # Draw the screen with the buttons.
             screen.blit(background, (0, 0))

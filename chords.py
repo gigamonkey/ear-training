@@ -10,6 +10,8 @@ import pygame as pg
 import pygame.midi
 
 from midi import Chord
+from midi import Note
+from midi import parallel
 from midi import play
 from midi import sequence
 
@@ -55,11 +57,21 @@ class Progression:
         return "-".join(self.names[d] for d in self.progression)
 
     def play(self, midi_out, root, bpm):
-        p = sequence(
-            [Chord(1, triad(root, self.scale, degree)) for degree in self.progression],
-            bpm,
-        )
-        play(midi_out, p)
+        triads = [Chord(1, triad(root, self.scale, d)) for d in self.progression]
+        play(midi_out, sequence(triads, bpm))
+
+    def play_random_bass(self, midi_out, root, bpm):
+        triads = [Chord(1, triad(root, self.scale, d)) for d in self.progression]
+        bass = [Note(1, random.choice(c.pitches) - 12) for c in triads]
+        play(midi_out, parallel([triads, bass], bpm))
+
+    def play_random_voicing(self, midi_out, root, bpm):
+        triads = [list(triad(root, self.scale, d)) for d in self.progression]
+        for t in triads:
+            random.shuffle(t)
+            t.append(random.choice(t) - 12)
+            t.append(random.choice(t) + 12)
+        play(midi_out, sequence([Chord(1, t) for t in triads], bpm))
 
 
 def notes(root, one_octave):
