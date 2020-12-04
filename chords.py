@@ -7,7 +7,6 @@ from itertools import islice
 
 from midi import Chord
 from midi import Note
-from midi import Rest
 from midi import play
 from midi import sequence
 
@@ -98,39 +97,6 @@ class Progression:
         return list(
             sequence(
                 [Chord(1, voicing(root, self.scale, d)) for d in self.progression], bpm
-            )
-        )
-
-
-class ChordType:
-
-    """
-    A slightly abstracted chord expressed in terms of a pattern of
-    intervals from the root. E.g. (0, 4, 7) is a major triad."
-    """
-
-    def __init__(self, name, pattern):
-        self.name = name
-        self.pattern = pattern
-
-    def __str__(self):
-        return self.name
-
-    def play(self, midi_out, root, bpm):
-        play(midi_out, sequence([Chord(1, chord(root, self.pattern))], bpm))
-
-    def render_chord(self, root, bpm):
-        return list(sequence([Chord(1, chord(root, self.pattern))], bpm))
-
-    def render_arpeggio_up(self, root, bpm):
-        return list(sequence([Note(1 / 2, root + p) for p in self.pattern], bpm))
-
-    def render_arpeggio_and_chord(self, root, bpm):
-        notes = chord(root, self.pattern)
-        return list(
-            sequence(
-                [Note(0.5, n) for n in notes] + [Rest(0.5), Chord(1, notes)],
-                bpm,
             )
         )
 

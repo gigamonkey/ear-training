@@ -4,21 +4,24 @@
 
 from app import Question
 from app import Quiz
-from chords import ChordType
 from chords import chord_types
 from midi import play
+from music import Rest
+from music import chord
+from music import melody
 
 
 class ChordQuestion(Question):
     def __init__(self, label, pattern):
         self.label = label
-        self.chord = ChordType(label, pattern)
+        self.pattern = pattern
 
     def play(self, midi_out):
-        play(midi_out, self.chord.render_chord(60, 120))
+        play(midi_out, chord(self.pattern).render(60, 120))
 
     def hint(self, midi_out):
-        play(midi_out, self.chord.render_arpeggio_and_chord(60, 120))
+        midi = melody(self.pattern).rhythm(1 / 8) + Rest(1 / 8) + chord(self.pattern)
+        play(midi_out, midi.render(60, 120))
 
 
 class ChordQuiz(Quiz):
