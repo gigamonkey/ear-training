@@ -13,11 +13,10 @@ import pygame.freetype
 import pygame.midi
 
 from chords import major_scale
-from chords import scale_up_down
-from midi import Line
-from midi import Note
 from midi import play
-from midi import sequence
+from music import Note
+from music import chord
+from music import melody
 
 size = (300, 500)
 
@@ -25,14 +24,25 @@ initial_button_color = (127, 127, 255)
 
 wrong_button_color = (64, 64, 255)
 
+
+def silence(duration):
+    return Note(0, duration, 0)
+
+
 # Played when we get it right.
-chirp = Line([Note(1 / 16, 96 + n) for n in (0, 5, 7, 12, 17, 19, 24)]).note(60, 1, 0)
+chirp = (melody((0, 5, 7, 12, 17, 19, 24)).rhythm(1 / 64) + silence(1 / 4)).render(
+    96, 120
+)
 
 # Played when we get it wrong.
-blat = Line().chord([30, 31, 32, 33, 34], 1 / 8).note(60, 2, 0)
+blat = (chord((0, 1, 2, 3, 4)).rhythm(1 / 32) + silence(1 / 2)).render(30, 120)
 
 
-establish_key = scale_up_down(major_scale, 60, 120)
+establish_key = (
+    (melody(major_scale + (12,) + tuple(reversed(major_scale))))
+    .rhythm(1 / 16)
+    .render(60, 120)
+)
 
 
 class Question:
@@ -178,14 +188,14 @@ class Quiz:
                 running, choice = get_answer(buttons, question, midi_out)
                 if running:
                     if choice == question:
-                        play(midi_out, sequence(chirp, 120))
+                        play(midi_out, chirp)
                         question.after_correct(midi_out)
                         wrong = set()
                     else:
                         if choice.label in wrong:
                             choice.play(midi_out)
                         else:
-                            play(midi_out, sequence(blat, 120))
+                            play(midi_out, blat)
                             wrong.add(choice.label)
 
         finally:
