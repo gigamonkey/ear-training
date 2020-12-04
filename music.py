@@ -20,7 +20,7 @@ class NoteOn:
     time: float
 
     def emit(self, midi_out):
-        midi_out.note_on(self.pitch, self.velocity)
+        midi_out.note_on(self.note, self.velocity)
 
 
 @dataclass
@@ -35,7 +35,7 @@ class NoteOff:
     time: float
 
     def emit(self, midi_out):
-        midi_out.note_off(self.pitch)
+        midi_out.note_off(self.note)
 
 
 @dataclass
@@ -89,8 +89,8 @@ class Note(Playable):
     """
 
     pitch: int
-    velocity: int = 127
     duration: float = 1 / 4
+    velocity: int = 127
 
     def midi(self, start, root, whole_note):
         note = root + self.pitch
@@ -216,6 +216,14 @@ def chord(notes):
 
 def melody(notes):
     return Sequence([Note(n) for n in notes])
+
+
+def dotted(d):
+    return d * 1.5
+
+
+def triplet(d):
+    return (d * 2) / 3
 
 
 if __name__ == "__main__":

@@ -11,7 +11,6 @@ Multiple sequences can be combined in parallel to allow overlapping
 notes.
 """
 
-
 import time
 from dataclasses import dataclass
 from typing import List
