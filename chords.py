@@ -75,16 +75,6 @@ def scale_up_down(scale, root, bpm):
     )
 
 
-def random_voicing(root, scale, d):
-    t = triad(root, scale, d)
-    t = random_inversion(t)
-    t.append(random.choice(t) - 12)
-    t.append(random.choice(t) + 12)
-    if random.choice((True, False)):
-        t = [n - 12 for n in t]
-    return t
-
-
 def random_inversion(notes):
     inversion = random.randrange(len(notes))
     return list(notes[inversion:]) + list(n + 12 for n in notes[:inversion])
