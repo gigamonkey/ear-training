@@ -222,8 +222,18 @@ def dotted(d):
     return d * 1.5
 
 
-def triplet(d):
-    return (d * 2) / 3
+def tuplet(base, numerator, denominator):
+    """
+    Define a tuplet duration as numerator notes in the duration of
+    denominator. E.g. a eight-note triplet is three notes in the space
+    of two eight notes, so tuplet(1/8, 3, 2) gives us the duration of
+    one note of an eigth-note triplet.
+    """
+    return (base * denominator) / numerator
+
+
+def triplet(base):
+    return tuplet(base, 3, 2)
 
 
 if __name__ == "__main__":

@@ -5,9 +5,6 @@
 import random
 from itertools import islice
 
-from midi import Note
-from midi import sequence
-
 chord_degrees = ("i", "ii", "iii", "iv", "v", "vi", "vii")
 
 chord_types = {
@@ -66,13 +63,6 @@ def roman_letters(scale):
         roman[kind_of_triad(t)](chord_degrees[i])
         for i, t in [(i, triad(0, scale, i)) for i in range(7)]
     ]
-
-
-def scale_up_down(scale, root, bpm):
-    pitches = list(islice(notes(root, scale), len(scale) + 1))
-    return list(
-        sequence([Note(0.5, p) for p in pitches + list(reversed(pitches))], bpm)
-    )
 
 
 def random_inversion(notes):
