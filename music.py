@@ -1,9 +1,9 @@
 "Abstracted collections of notes in sequence and parallel."
 
-
-import dataclasses
 from collections import Counter
 from dataclasses import dataclass
+from dataclasses import replace
+from itertools import cycle
 from typing import List
 
 
@@ -54,25 +54,28 @@ class Playable:
     def __or__(self, other):
         return Parallel(self.parallel + other.parallel)
 
-    def render(self, root, quarter_note):
-        on_off = sorted(
-            self.midi(0, root, quarter_note),
-            key=lambda e: (e.time, isinstance(e, NoteOn), e.note),
+    def transpose(self, transposition):
+        return replace(
+            self, children=[c.transpose(transposition) for c in self.children]
         )
 
-        on = Counter()
-        filtered = []
-        for e in on_off:
-            if isinstance(e, NoteOn):
-                if on[e.note] == 0:
-                    filtered.append(e)
-                on[e.note] += 1
-            elif isinstance(e, NoteOff):
-                on[e.note] -= 1
-                if on[e.note] == 0:
-                    filtered.append(e)
+    def render(self, root, bpm):
+        def ordering(e):
+            return ((e.time, isinstance(e, NoteOn), e.note),)
 
-        return filtered
+        def filter(events):
+            on = Counter()
+            for e in sorted(events, key=ordering):
+                if isinstance(e, NoteOn):
+                    if on[e.note] == 0:
+                        yield e
+                    on[e.note] += 1
+                elif isinstance(e, NoteOff):
+                    on[e.note] -= 1
+                    if on[e.note] == 0:
+                        yield e
+
+        return list(filter(self.midi(0, root, (60 / bpm) * 4)))
 
 
 @dataclass(frozen=True)
@@ -87,15 +90,18 @@ class Note(Playable):
 
     pitch: int
     velocity: int = 127
-    duration: float = 1.0
+    duration: float = 1 / 4
 
-    def midi(self, start, root, quarter_note):
+    def midi(self, start, root, whole_note):
         note = root + self.pitch
         yield NoteOn(note, self.velocity, start)
-        yield NoteOff(note, start + (self.duration * quarter_note))
+        yield NoteOff(note, start + (self.duration * whole_note))
 
     def transpose(self, transposition):
-        return dataclasses.replace(self, pitch=self.pitch + transposition)
+        return replace(self, pitch=self.pitch + transposition)
+
+    def rhythm(self, duration):
+        return replace(self, duration=duration)
 
     @property
     def sequential(self):
@@ -109,13 +115,16 @@ class Note(Playable):
 @dataclass(frozen=True)
 class Rest(Playable):
 
-    duration: float = 1.0
+    duration: float = 1 / 4
 
-    def midi(self, start, root, quarter_note):
-        yield Time(start + (self.duration * quarter_note))
+    def midi(self, start, root, whole_note):
+        yield Time(start + (self.duration * whole_note))
 
     def transpose(self, transposition):
         return self
+
+    def rhythm(self, duration):
+        return replace(self, duration=duration)
 
     @property
     def sequential(self):
@@ -135,23 +144,39 @@ class Sequence(Playable):
     when the last note off event
     """
 
-    sequential: List[Playable]
+    children: List[Playable]
 
-    def midi(self, start, root, quarter_note):
+    def midi(self, start, root, whole_note):
         t = start
-        for c in self.sequential:
+        for c in self.children:
             # The child may emit multiple MIDI events but it is over
             # whenever the last event is. We don't assume that the
             # events are necessarily emitted in order.
-            for e in c.midi(t, root, quarter_note):
+            for e in c.midi(t, root, whole_note):
                 t = max(t, e.time)
                 if not isinstance(e, Time):
                     yield e
 
-    def transpose(self, transposition):
-        return dataclasses.replace(
-            self, sequential=[c.transpose(transposition) for c in self.sequential]
+    def rhythm(self, durations):
+
+        """
+        When applied to a sequence the duration can be either a single
+        value which is then applied to each child or an iterable of
+        values which are applied in a cycle to the children.
+        """
+
+        try:
+            iterable = iter(durations)
+        except TypeError:
+            iterable = [durations]
+
+        return replace(
+            self, children=[c.rhythm(d) for c, d in zip(self.children, cycle(iterable))]
         )
+
+    @property
+    def sequential(self):
+        return self.children
 
     @property
     def parallel(self):
@@ -167,20 +192,22 @@ class Parallel(Playable):
     can take however long it takes.
     """
 
-    parallel: List[Playable]
+    children: List[Playable]
 
-    def midi(self, start, root, quarter_note):
-        for c in self.parallel:
-            yield from c.midi(start, root, quarter_note)
+    def midi(self, start, root, whole_note):
+        for c in self.children:
+            yield from c.midi(start, root, whole_note)
 
-    def transpose(self, transposition):
-        return dataclasses.replace(
-            self, parallel=[c.transpose(transposition) for c in self.parallel]
-        )
+    def rhythm(self, duration):
+        return replace(self, children=[c.rhythm(duration) for c in self.children])
 
     @property
     def sequential(self):
         return [self]
+
+    @property
+    def parallel(self):
+        return self.children
 
 
 def chord(notes):
@@ -197,11 +224,14 @@ if __name__ == "__main__":
     IV = I.transpose(5)
     V = I.transpose(7)
 
-    m = melody((0, 7, 0, 7, 5, 4, 2, 0)) + Rest(4) + melody((0, 7, 0, 7, 5, 4, 2, 0))
-    h = I + V + IV + I
+    m1 = melody((0, 7, 0, 7, 5, 4, 2, 0))
 
-    # x = m.transpose(12) | h.transpose(-12)
-    x = m | h
+    m = m1.rhythm(1 / 8) + Rest(1) + m1.rhythm([1 / 4 * 2 / 3, 1 / 4 * 1 / 3])
+    h = I + (V + IV).rhythm(1 / 8) + I.rhythm(1 / 2)
 
-    for e in x.render(60, 60 / 120):
+    x = m.transpose(12) | h.transpose(-12)
+
+    stacked = chord((0, 4, 7)) | chord((0, 4, 7)).transpose(12)
+
+    for e in stacked.render(60, 60):
         print(e)
