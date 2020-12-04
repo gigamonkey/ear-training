@@ -80,21 +80,6 @@ def random_inversion(notes):
     return list(notes[inversion:]) + list(n + 12 for n in notes[:inversion])
 
 
-class Solfege:
-    def __init__(self, name, degree, scale=major_scale):
-        self.name = name
-        self.degree = degree
-        self.scale = scale
-
-    def render(self, root, bpm):
-        pitch = next(islice(notes(root, self.scale), self.degree - 1, self.degree))
-        return list(sequence([Note(1, root), Note(1, pitch)], bpm))
-
-    def render_walk_back_to_do(self, root, bpm):
-        pitches = list(reversed(list(islice(notes(root, self.scale), self.degree))))
-        return list(sequence([Note(0.5, p) for p in pitches] + [Note(1, root, 0)], bpm))
-
-
 def notes(root, one_octave):
     "Yield infinite octaves of a given pattern (e.g. a mode) starting from a root note."
     octave = 0
