@@ -8,14 +8,36 @@ from itertools import permutations
 
 from app import Question
 from app import Quiz
-from chords import Progression
+from chords import major_scale
 from chords import random_voicing
+from chords import roman_letters
 from midi import play
+from music import Sequence
+from music import chord
+
+
+class Progression:
+
+    """
+    A slightly abstracted chord progression, expressed in terms of
+    degrees of a given scale. Chords are built out of the notes of the
+    scale.
+    """
+
+    def __init__(self, progression, scale=major_scale):
+        self.progression = progression
+        self.scale = scale
+        names = roman_letters(scale)
+        self.name = "-".join(names[d] for d in self.progression)
+
+    def render(self, root, voicing, bpm):
+        midi = Sequence([chord(voicing(0, self.scale, d)) for d in self.progression])
+        return midi.render(root, bpm)
 
 
 class ProgressionQuestion(Question):
     def __init__(self, progression):
-        self.label = progression.name()
+        self.label = progression.name
         self.progression = progression
         self.midi = self.progression.render(60, random_voicing, 120)
 

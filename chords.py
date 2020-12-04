@@ -5,9 +5,7 @@
 import random
 from itertools import islice
 
-from midi import Chord
 from midi import Note
-from midi import play
 from midi import sequence
 
 chord_degrees = ("i", "ii", "iii", "iv", "v", "vi", "vii")
@@ -70,37 +68,6 @@ def roman_letters(scale):
     ]
 
 
-class Progression:
-
-    """
-    A slightly abstracted chord progression, expressed in terms of
-    degrees of a given scale. Chords are built out of the notes of the
-    scale.
-    """
-
-    def __init__(self, progression, scale=major_scale):
-        self.progression = progression
-        self.scale = scale
-        self.names = roman_letters(scale)
-
-    def name(self):
-        return str(self)
-
-    def __str__(self):
-        return "-".join(self.names[d] for d in self.progression)
-
-    def play(self, midi_out, root, bpm):
-        triads = [Chord(1, triad(root, self.scale, d)) for d in self.progression]
-        play(midi_out, sequence(triads, bpm))
-
-    def render(self, root, voicing, bpm):
-        return list(
-            sequence(
-                [Chord(1, voicing(root, self.scale, d)) for d in self.progression], bpm
-            )
-        )
-
-
 def scale_up_down(scale, root, bpm):
     pitches = list(islice(notes(root, scale), len(scale) + 1))
     return list(
@@ -157,10 +124,6 @@ def triad(root, scale, degree):
 
 def chord(root, pattern):
     return tuple(root + p for p in pattern)
-
-
-def reroot(chord):
-    return tuple(x - chord[0] for x in chord)
 
 
 def chord_intervals(chord):
