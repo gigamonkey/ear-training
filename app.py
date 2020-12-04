@@ -153,8 +153,6 @@ class Quiz:
         try:
             midi_out.set_instrument(0)
 
-            play(midi_out, establish_key)
-
             running = True
 
             wrong = set()
