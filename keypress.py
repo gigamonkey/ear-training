@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+"Utility for finding out what keys' scancodes are."
+
 
 import pygame as pg
 import pygame.midi

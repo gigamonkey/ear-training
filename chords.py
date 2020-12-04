@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 
-import random
-import sys
-from itertools import islice
-from itertools import permutations
+"Code for dealing with abstracted musical structures."
 
-import pygame as pg
-import pygame.midi
+import random
+from itertools import islice
 
 from midi import Chord
 from midi import Note
@@ -207,35 +204,3 @@ def chord_intervals(chord):
 def kind_of_triad(triad):
     a, b, c = triad
     return triads[(b - a, c - b)]
-
-
-def run(device_id=None):
-
-    pg.init()
-    pygame.midi.init()
-
-    port = pygame.midi.get_default_output_id() if device_id is None else device_id
-
-    midi_out = pygame.midi.Output(port, 0)
-
-    try:
-        midi_out.set_instrument(0)
-
-        all_progressions = [
-            p for p in permutations(range(7), 4) if p[0] == 0 or p[-1] == 0
-        ]
-
-        p = Progression(random.choice(all_progressions))
-        p.play(midi_out, 60, 120)
-        print(p)
-
-    finally:
-        del midi_out
-        pygame.midi.quit()
-
-
-if __name__ == "__main__":
-
-    device_id = int(sys.argv[1]) if len(sys.argv) > 1 else None
-
-    run(device_id)

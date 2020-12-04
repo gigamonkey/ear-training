@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+
+"For no particular reason an implementation of Row Row Row your boat as a round."
+
+
 import pygame
 import pygame.midi
 

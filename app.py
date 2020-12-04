@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+"""
+Basic structure for an ear training app.
+
+Customize by providing an implementation of Quiz.
+"""
+
 import random
 
 import pygame

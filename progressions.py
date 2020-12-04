@@ -34,12 +34,11 @@ class ProgressionQuiz(Quiz):
     def make_questions(self, universe):
 
         seed = random.choice(universe)
-        subset = [m for m in universe if similar(seed, m)]
+        sample = random.sample([m for m in universe if similar(seed, m)], 4)
 
-        random.shuffle(subset)
-        return [
-            ProgressionQuestion(make_progression(m)) for m in random.sample(subset, 4)
-        ]
+        questions = [ProgressionQuestion(make_progression(m)) for m in sample]
+        random.shuffle(questions)
+        return questions
 
 
 def make_progression(middle):

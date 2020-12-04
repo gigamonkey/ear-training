@@ -16,9 +16,6 @@ import time
 from dataclasses import dataclass
 from typing import List
 
-import pygame
-import pygame.midi
-
 
 @dataclass(frozen=True)
 class NoteOn:
@@ -193,39 +190,3 @@ def tuplet(base, numerator, denominator):
 def triplet(base):
 
     return tuplet(base, 3, 2)
-
-
-if __name__ == "__main__":
-
-    quarter_triplet = triplet(1)
-
-    click = (
-        Line()
-        .note(96, duration=quarter_triplet / 2)
-        .rest(quarter_triplet / 2)
-        .playables
-        * 6
-    )
-    midi = (
-        Line()
-        .note(60 - 12)
-        .rest()
-        .chord([60, 64, 67], duration=2, velocity=120)
-        .playables
-    )
-
-    pygame.init()
-    pygame.midi.init()
-
-    port = pygame.midi.get_default_output_id()
-
-    midi_out = pygame.midi.Output(port, 0)
-
-    try:
-        midi_out.set_instrument(0)
-
-        play(midi_out, parallel([click, midi], 120.0))
-
-    finally:
-        del midi_out
-        pygame.midi.quit()

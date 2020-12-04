@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"Quiz of scale degrees types."
+"Quiz of scale degrees."
 
 from app import Question
 from app import Quiz
