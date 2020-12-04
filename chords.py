@@ -138,6 +138,13 @@ class ChordType:
         )
 
 
+def scale_up_down(scale, root, bpm):
+    pitches = list(islice(notes(root, scale), len(scale) + 1))
+    return list(
+        sequence([Note(0.5, p) for p in pitches + list(reversed(pitches))], bpm)
+    )
+
+
 def random_voicing(root, scale, d):
     t = triad(root, scale, d)
     t = random_inversion(t)
@@ -151,6 +158,21 @@ def random_voicing(root, scale, d):
 def random_inversion(notes):
     inversion = random.randrange(len(notes))
     return list(notes[inversion:]) + list(n + 12 for n in notes[:inversion])
+
+
+class Solfege:
+    def __init__(self, name, degree, scale=major_scale):
+        self.name = name
+        self.degree = degree
+        self.scale = scale
+
+    def render(self, root, bpm):
+        pitch = next(islice(notes(root, self.scale), self.degree - 1, self.degree))
+        return list(sequence([Note(1, root), Note(1, pitch)], bpm))
+
+    def render_walk_back_to_do(self, root, bpm):
+        pitches = list(reversed(list(islice(notes(root, self.scale), self.degree))))
+        return list(sequence([Note(0.5, p) for p in pitches] + [Note(1, root, 0)], bpm))
 
 
 def notes(root, one_octave):

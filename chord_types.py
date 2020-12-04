@@ -2,13 +2,14 @@
 
 "Quiz of chord types."
 
+from app import Question
 from app import Quiz
 from chords import ChordType
 from chords import chord_types
 from midi import play
 
 
-class Question:
+class ChordQuestion(Question):
     def __init__(self, label, pattern):
         self.label = label
         self.chord = ChordType(label, pattern)
@@ -22,7 +23,7 @@ class Question:
 
 class ChordQuiz(Quiz):
     def make_universe(self):
-        return [Question(name, pattern) for name, pattern in chord_types.items()]
+        return [ChordQuestion(name, pattern) for name, pattern in chord_types.items()]
 
 
 if __name__ == "__main__":

@@ -6,6 +6,8 @@ import pygame
 import pygame.freetype
 import pygame.midi
 
+from chords import major_scale
+from chords import scale_up_down
 from midi import Line
 from midi import Note
 from midi import play
@@ -22,6 +24,21 @@ chirp = Line([Note(1 / 16, 96 + n) for n in (0, 5, 7, 12, 17, 19, 24)]).note(60,
 
 # Played when we get it wrong.
 blat = Line().chord([30, 31, 32, 33, 34], 1 / 8).note(60, 2, 0)
+
+
+establish_key = scale_up_down(major_scale, 60, 120)
+
+
+class Question:
+    def play(self, midi_out):
+        "Play the question."
+
+    def hint(self, midi_out):
+        "Play a hint for the question. By default is just the question again."
+        self.play(midi_out)
+
+    def after_correct(self, midi_out):
+        "Some quizes want to play something after a correct answer."
 
 
 class Button:
@@ -60,7 +77,11 @@ def is_replay(e):
 
 
 def is_replay_with_hint(e):
-    return e.type == pygame.KEYDOWN and e.key in {pygame.K_a, pygame.K_h}
+    return e.type == pygame.KEYDOWN and e.key == pygame.K_h
+
+
+def is_establish_key(e):
+    return e.type == pygame.KEYDOWN and e.key == pygame.K_k
 
 
 def render_buttons(surface, quiz, rect, font, wrong, gap=5):
@@ -84,6 +105,8 @@ def get_answer(buttons, question, midi_out):
             question.play(midi_out)
         elif is_replay_with_hint(event):
             question.hint(midi_out)
+        elif is_establish_key(event):
+            play(midi_out, establish_key)
         elif event.type == pygame.MOUSEBUTTONDOWN:
             for b in buttons:
                 if b.is_hit(event.pos):
@@ -96,7 +119,6 @@ class Quiz:
 
     def make_universe(self):
         "Make the universe from which make_questions will create a set of questions."
-        pass
 
     def make_questions(self, universe):
         return universe
@@ -125,6 +147,8 @@ class Quiz:
         try:
             midi_out.set_instrument(0)
 
+            play(midi_out, establish_key)
+
             running = True
 
             wrong = set()
@@ -151,6 +175,7 @@ class Quiz:
                 if running:
                     if choice == question:
                         play(midi_out, sequence(chirp, 120))
+                        question.after_correct(midi_out)
                         wrong = set()
                     else:
                         if choice.label in wrong:

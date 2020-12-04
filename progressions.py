@@ -6,13 +6,14 @@ import random
 import sys
 from itertools import permutations
 
+from app import Question
 from app import Quiz
 from chords import Progression
 from chords import random_voicing
 from midi import play
 
 
-class Question:
+class ProgressionQuestion(Question):
     def __init__(self, progression):
         self.label = progression.name()
         self.progression = progression
@@ -20,9 +21,6 @@ class Question:
 
     def play(self, midi_out):
         play(midi_out, self.midi)
-
-    def hint(self, midi_out):
-        self.play(midi_out)
 
 
 class ProgressionQuiz(Quiz):
@@ -39,7 +37,9 @@ class ProgressionQuiz(Quiz):
         subset = [m for m in universe if similar(seed, m)]
 
         random.shuffle(subset)
-        return [Question(make_progression(m)) for m in random.sample(subset, 4)]
+        return [
+            ProgressionQuestion(make_progression(m)) for m in random.sample(subset, 4)
+        ]
 
 
 def make_progression(middle):
