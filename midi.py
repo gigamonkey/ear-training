@@ -138,7 +138,7 @@ def sequence(midi: List[Playable], bpm: float):
 
     per_quarter_note = 60 / bpm
 
-    t = 0
+    t = 0.0
 
     for m in midi:
         yield from m.note_ons(t)
