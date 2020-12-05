@@ -12,10 +12,10 @@ import pygame
 import pygame.freetype
 import pygame.midi
 
+from midi import Note
 from midi import play
-from music import Note
+from music import Scale
 from music import chord
-from music import major_scale
 from music import melody
 
 size = (300, 500)
@@ -39,7 +39,7 @@ blat = (chord((0, 1, 2, 3, 4)).rhythm(1 / 32) + silence(1 / 2)).render(30, 120)
 
 
 establish_key = (
-    (melody(major_scale + (12,) + tuple(reversed(major_scale))))
+    (melody(Scale.major + (12,) + tuple(reversed(Scale.major))))
     .rhythm(1 / 16)
     .render(60, 120)
 )
@@ -134,10 +134,39 @@ class Quiz:
         self.name = name
 
     def make_universe(self):
-        "Make the universe from which make_questions will create a set of questions."
+        """
+        Make the universe from which make_questions will create a set of
+        questions. This method is only called once and it's result is
+        turned into a set of actual choices each time we present a new
+        question. For simple quizes the universe *is* the set of
+        choices and only needs to be generated once. If the universe
+        of possible questions is too big to present all at once then
+        the make_questions method can be used to drwa an appropriately
+        sized set of questions out of the universe.
+        """
+
+    def choices(self, universe):
+        """
+        From the universe of possible questions, pick an appropriately
+        sized subset of choices to present in one question. If the set
+        of choices is always the same, then the default implementation
+        is fine. If the universe is too big, override this method to
+        reduce it in some way. That might be as simple as picking some
+        choices at random but may require picking related elements of
+        the total universe.
+        """
+        return universe
 
     def make_questions(self, universe):
-        return universe
+        """
+        From the choices returned by choices() return the actual question
+        and the choices. The default implementation is fine for many
+        quizes where any of the choices could be the actual question.
+        Other quizes may create choices that play something in
+        relation to the correct answer.
+        """
+        choices = self.choices(universe)
+        return random.choice(choices), choices
 
     def run(self):
 
@@ -170,8 +199,7 @@ class Quiz:
             while running:
 
                 if not wrong:
-                    questions = self.make_questions(universe)
-                    question = random.choice(questions)
+                    question, questions = self.make_questions(universe)
 
                 # Draw the screen with the buttons.
                 screen.blit(background, (0, 0))

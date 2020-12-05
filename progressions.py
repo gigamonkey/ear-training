@@ -9,17 +9,16 @@ from itertools import permutations
 from app import Question
 from app import Quiz
 from midi import play
+from music import Scale
 from music import Sequence
 from music import chord
 from music import inversion
-from music import major_scale
 from music import roman
-from music import scale
 
 
 class ProgressionQuestion(Question):
-    def __init__(self, progression, scale_pattern=major_scale):
-        s = scale(scale_pattern)
+    def __init__(self, progression, scale=Scale.major):
+        s = Scale(scale)
         chords = [s.triad(d) for d in progression]
         self.label = "-".join(roman(d, c) for d, c in zip(progression, chords))
         self.midi = Sequence([random_voicing(c) for c in chords]).render(60, 120)
@@ -34,16 +33,15 @@ class ProgressionQuiz(Quiz):
         self.number = number
 
     def make_universe(self):
-        return list(permutations(range(1, 7), self.number - 2))
+        return list(permutations(range(2, 8), self.number - 2))
 
-    def make_questions(self, universe):
-
+    def make_choices(self, universe):
         seed = random.choice(universe)
         sample = random.sample([m for m in universe if similar(seed, m)], 4)
 
-        questions = [ProgressionQuestion((0, *m, 0)) for m in sample]
-        random.shuffle(questions)
-        return questions
+        choices = [ProgressionQuestion((1, *m, 1)) for m in sample]
+        random.shuffle(choices)
+        return choices
 
 
 def similar(p1, p2):
