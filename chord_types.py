@@ -4,11 +4,22 @@
 
 from app import Question
 from app import Quiz
-from chords import chord_types
+from midi import Rest
 from midi import play
-from music import Rest
 from music import chord
 from music import melody
+
+chord_types = {
+    "Major": (0, 4, 7),
+    "Minor": (0, 3, 7),
+    "Diminished": (0, 3, 6),
+    "Augmented": (0, 4, 8),
+    "Major 7": (0, 4, 7, 11),
+    "Minor 7": (0, 3, 7, 10),
+    "Dominant 7": (0, 4, 7, 10),
+    "Minor 7♭5": (0, 3, 6, 10),
+    "Diminished 7": (0, 3, 6, 9),
+}
 
 
 class ChordQuestion(Question):

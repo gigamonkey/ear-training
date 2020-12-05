@@ -12,10 +12,10 @@ import pygame
 import pygame.freetype
 import pygame.midi
 
-from chords import major_scale
 from midi import play
 from music import Note
 from music import chord
+from music import major_scale
 from music import melody
 
 size = (300, 500)

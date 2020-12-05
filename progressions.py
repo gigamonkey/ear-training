@@ -8,21 +8,20 @@ from itertools import permutations
 
 from app import Question
 from app import Quiz
-from chords import major_scale
-from chords import random_inversion
-from chords import roman_letters
-from chords import triad
 from midi import play
 from music import Sequence
 from music import chord
+from music import inversion
+from music import major_scale
+from music import roman
+from music import scale
 
 
 class ProgressionQuestion(Question):
-    def __init__(self, progression, scale=major_scale):
-        names = roman_letters(scale)
-        chords = [triad(0, scale, d) for d in progression]
-
-        self.label = "-".join(names[d] for d in progression)
+    def __init__(self, progression, scale_pattern=major_scale):
+        s = scale(scale_pattern)
+        chords = [s.triad(d) for d in progression]
+        self.label = "-".join(roman(d, c) for d, c in zip(progression, chords))
         self.midi = Sequence([random_voicing(c) for c in chords]).render(60, 120)
 
     def play(self, midi_out):
@@ -52,7 +51,8 @@ def similar(p1, p2):
 
 
 def random_voicing(notes):
-    t = random_inversion(notes)
+    "Take a chord in basic form and randomly revoice it."
+    t = list(inversion(notes, random.randrange(len(notes))))
     t.append(random.choice(t) - 12)
     t.append(random.choice(t) + 12)
     if random.choice((True, False)):

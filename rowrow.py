@@ -6,9 +6,8 @@
 import pygame
 import pygame.midi
 
+from midi import Rest
 from midi import play
-from music import Note
-from music import Rest
 from music import dotted
 from music import melody
 from music import triplet
@@ -30,10 +29,12 @@ def make_melody():
         )
     )
     t = melody((12, 12, 12)).rhythm(triplet(1 / 8))
-    t + t.transpose(-5) + t.transpose(-8) + t.transpose(-12)
-    melody((7, 5, 4, 2)).rhythm((dotted(1 / 8), 1 / 16)) + Note(0, 1 / 2)
+    p2 = t + t.down(5) + t.down(8) + t.down(12)
+    p3 = melody((7, 5, 4, 2)).rhythm((dotted(1 / 8), 1 / 16)) + melody((0,)).rhythm(
+        1 / 2
+    )
 
-    return m1 + m2 + m3
+    return p1 + p2 + p3
 
 
 def run():

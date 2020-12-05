@@ -1,255 +1,143 @@
-"Abstracted collections of notes in sequence and parallel."
+"API for manipulating musical elements."
 
-from collections import Counter
 from dataclasses import dataclass
-from dataclasses import replace
-from itertools import cycle
-from typing import List
+from typing import Tuple
+
+from midi import Note
+from midi import Parallel
+from midi import Sequence
+
+
+def chord(pitches):
+    "Build a chord out of the given pitches."
+    return Parallel([Note(n) for n in pitches])
+
+
+def melody(pitches):
+    "Build a melody line out of the given pitches."
+    return Sequence([Note(n) if n is not None else Rest() for n in pitches])
+
+
+#
+# Scales - scales are defined by a pattern of notes of one octave
+# represented by a tuple of semitones above the root. E.g. (0, 2, 4,
+# 5, 7, 9, 11) is a major scale. We
+#
+
+
+def scale(pattern, root=0):
+    return Scale(pattern, root)
 
 
 @dataclass
-class NoteOn:
+class Scale:
 
-    """
-    A MIDI note on event that should be emitted at a given time
-    relative to zero time.
-    """
+    pattern: Tuple[int]
+    root: int
 
-    note: int
-    velocity: int
-    time: float
+    def note(self, n):
+        "Return the note of the scale at the given degree, optionally transposed up or down by octaves."
+        octave, degree = divmod(n, len(self.pattern))
+        return self.root + self.pattern[degree] + (octave * 12)
 
-    def emit(self, midi_out):
-        midi_out.note_on(self.note, self.velocity)
+    def triad(self, n):
+        return tuple(self.note(d) for d in range(n, n + 6, 2))
 
-
-@dataclass
-class NoteOff:
-
-    """
-    A MIDI note off event that should be emitted at a given time
-    relative to zero time.
-    """
-
-    note: int
-    time: float
-
-    def emit(self, midi_out):
-        midi_out.note_off(self.note)
+    def seventh(self, n):
+        return tuple(self.note(d) for d in range(n, n + 8, 2))
 
 
-@dataclass
-class Time:
-
-    "Fake event to advance time in sequences."
-
-    time: float
+def inversion(chord, inversion):
+    return tuple(chord[inversion:]) + tuple(n + 12 for n in chord[:inversion])
 
 
-@dataclass
-class Playable:
-    def __add__(self, other):
-        return Sequence(self.sequential + other.sequential)
-
-    def __or__(self, other):
-        return Parallel(self.parallel + other.parallel)
-
-    def transpose(self, transposition):
-        return replace(
-            self, children=[c.transpose(transposition) for c in self.children]
-        )
-
-    def render(self, root, bpm):
-        def ordering(e):
-            return ((e.time, isinstance(e, NoteOn), e.note),)
-
-        def filter(events):
-            on = Counter()
-            for e in sorted(events, key=ordering):
-                if isinstance(e, NoteOn):
-                    if on[e.note] == 0:
-                        yield e
-                    on[e.note] += 1
-                elif isinstance(e, NoteOff):
-                    on[e.note] -= 1
-                    if on[e.note] == 0:
-                        yield e
-
-        return list(filter(self.midi(0, root, (60 / bpm) * 4)))
-
-
-@dataclass(frozen=True)
-class Note(Playable):
-    """
-    A single note. Pitch is abstracted until notes are rendered to
-    MIDI with a specific root which will be mapped to pitch 0.
-    Velocity is the MIDI velocity. And duration is in absract quarter
-    notes with the actual duration to be determined when rendering to
-    MIDI.
-    """
-
-    pitch: int
-    duration: float = 1 / 4
-    velocity: int = 127
-
-    def midi(self, start, root, whole_note):
-        note = root + self.pitch
-        yield NoteOn(note, self.velocity, start)
-        yield NoteOff(note, start + (self.duration * whole_note))
-
-    def transpose(self, transposition):
-        return replace(self, pitch=self.pitch + transposition)
-
-    def rhythm(self, duration):
-        return replace(self, duration=duration)
-
-    @property
-    def sequential(self):
-        return [self]
-
-    @property
-    def parallel(self):
-        return [self]
-
-
-@dataclass(frozen=True)
-class Rest(Playable):
-
-    duration: float = 1 / 4
-
-    def midi(self, start, root, whole_note):
-        yield Time(start + (self.duration * whole_note))
-
-    def transpose(self, transposition):
-        return self
-
-    def rhythm(self, duration):
-        return replace(self, duration=duration)
-
-    @property
-    def sequential(self):
-        return [self]
-
-    @property
-    def parallel(self):
-        return []
-
-
-@dataclass
-class Sequence(Playable):
-
-    """
-    A sequence of playable things. When rendering to MIDI each child
-    starts after it preceeding sibling. So we need to keep track of
-    when the last note off event
-    """
-
-    children: List[Playable]
-
-    def midi(self, start, root, whole_note):
-        t = start
-        for c in self.children:
-            # The child may emit multiple MIDI events but it is over
-            # whenever the last event is. We don't assume that the
-            # events are necessarily emitted in order.
-            for e in c.midi(t, root, whole_note):
-                t = max(t, e.time)
-                if not isinstance(e, Time):
-                    yield e
-
-    def rhythm(self, durations):
-
-        """
-        When applied to a sequence the duration can be either a single
-        value which is then applied to each child or an iterable of
-        values which are applied in a cycle to the children.
-        """
-
-        try:
-            iterable = iter(durations)
-        except TypeError:
-            iterable = [durations]
-
-        return replace(
-            self, children=[c.rhythm(d) for c, d in zip(self.children, cycle(iterable))]
-        )
-
-    @property
-    def sequential(self):
-        return self.children
-
-    @property
-    def parallel(self):
-        return [self]
-
-
-@dataclass
-class Parallel(Playable):
-
-    """
-    Children are played in parallel so each child starts at the same
-    time. They don't have to end at the same time however--each one
-    can take however long it takes.
-    """
-
-    children: List[Playable]
-
-    def midi(self, start, root, whole_note):
-        for c in self.children:
-            yield from c.midi(start, root, whole_note)
-
-    def rhythm(self, duration):
-        return replace(self, children=[c.rhythm(duration) for c in self.children])
-
-    @property
-    def sequential(self):
-        return [self]
-
-    @property
-    def parallel(self):
-        return self.children
-
-
-def chord(notes):
-    return Parallel([Note(n) for n in notes])
-
-
-def melody(notes):
-    return Sequence([Note(n) for n in notes])
+#
+# Rhythmic elements. Durations are expressed in terms of whole notes
+# so 1/4 is a quarter note.
+#
 
 
 def dotted(d):
+    "The duration of a dotted value."
     return d * 1.5
 
 
 def tuplet(base, numerator, denominator):
     """
-    Define a tuplet duration as numerator notes in the duration of
-    denominator. E.g. a eight-note triplet is three notes in the space
-    of two eight notes, so tuplet(1/8, 3, 2) gives us the duration of
-    one note of an eigth-note triplet.
+    Duration of one element of a tuplet of N notes in the space of D
+    base notes. E.g. tuplet(1/8, 3, 2) returns the length of one note
+    in an eighth note triplet (three notes in the space of two eighth
+    notes).
     """
-    return (base * denominator) / numerator
+    return base * (denominator / numerator)
 
 
 def triplet(base):
     return tuplet(base, 3, 2)
 
 
+#
+# Utilities
+#
+
+major_scale = (0, 2, 4, 5, 7, 9, 11)
+minor_scale = (0, 2, 3, 5, 7, 8, 10)
+pentatonic_major_scale = (0, 2, 4, 7, 9)
+
+chord_degrees = ("i", "ii", "iii", "iv", "v", "vi", "vii")
+
+romanization_fns = {
+    "major": str.upper,
+    "minor": str.lower,
+    "diminished": lambda d: d.lower() + "°",
+    "augmented": lambda d: d.upper + "⁺",
+}
+
+
+def roman(d, triad):
+    return romanization_fns[kind_of_triad(triad)](chord_degrees[d % 7])
+
+
+triads = {
+    (3, 3): "diminished",
+    (3, 4): "minor",
+    (4, 3): "major",
+    (4, 4): "augmented",
+}
+
+
+def kind_of_triad(triad):
+    a, b, c = triad
+    return triads[(b - a, c - b)]
+
+
+intervals = [
+    "P1",
+    "m2",
+    "M2",
+    "m3",
+    "M3",
+    "P4",
+    "A4",
+    "P5",
+    "m6",
+    "M6",
+    "m7",
+    "M7",
+    "P8",
+]
+
+
+def chord_intervals(chord):
+    return [intervals[chord[i] - chord[0]] for i in range(1, len(chord))]
+
+
 if __name__ == "__main__":
 
-    I = chord((0, 4, 7))
-    IV = I.transpose(5)
-    V = I.transpose(7)
+    s = scale((0, 2, 4, 5, 7, 9, 11))
 
-    m1 = melody((0, 7, 0, 7, 5, 4, 2, 0))
-
-    m = m1.rhythm(1 / 8) + Rest(1) + m1.rhythm([1 / 4 * 2 / 3, 1 / 4 * 1 / 3])
-    h = I + (V + IV).rhythm(1 / 8) + I.rhythm(1 / 2)
-
-    x = m.transpose(12) | h.transpose(-12)
-
-    stacked = chord((0, 4, 7)) | chord((0, 4, 7)).transpose(12)
-
-    for e in stacked.render(60, 60):
-        print(e)
+    for i in range(24):
+        triad = s.triad(i)
+        print(
+            f"{i}: {s.note(i)} -> {triad} / {s.seventh(i)} ({roman(i, triad)}) ({chord_intervals(triad)})"
+        )
