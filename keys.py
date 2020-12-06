@@ -21,7 +21,7 @@ class SimpleKeyboard:
 
     white_keys = [0, 2, 4, 5, 7, 9, 11]
 
-    def __init__(self, rect, font, gap):
+    def __init__(self, labels, rect, font, gap):
         self.rect = rect
         self.font = font
         self.gap = gap
@@ -33,7 +33,7 @@ class SimpleKeyboard:
 
         size = (min(max_width, max_height),) * 2
         self.keys = [
-            Key(k, str(k), self.key_rect(k, size), self.font)
+            Key(k, labels[k], self.key_rect(k, size), self.font)
             for k in SimpleKeyboard.keys
         ]
 
@@ -92,13 +92,14 @@ class Key:
 
 
 class Quiz:
-    def __init__(self):
-        pygame.midi.init()
-        port = pygame.midi.get_default_output_id()
-        self.midi_out = pygame.midi.Output(port, 0)
+    def __init__(self, labels):
+        self.labels = labels
         self.asked = []
 
     def start(self):
+        pygame.midi.init()
+        port = pygame.midi.get_default_output_id()
+        self.midi_out = pygame.midi.Output(port, 0)
         self.midi_out.set_instrument(0)
 
     def play(self):
@@ -120,7 +121,7 @@ class Quiz:
             play(self.midi_out, chirp)
         else:
             print(
-                f"Key {key.note} played. That is incorrect. Correct answer was {expected}"
+                f"Key {key.note} played. That is incorrect. Correct answer was {self.labels[expected]}"
             )
             play(self.midi_out, blat)
 
@@ -150,7 +151,9 @@ class UI:
 
         self.running = False
         self.screen = pygame.display.set_mode(self.size)
-        self.keyboard = SimpleKeyboard(pygame.Rect(kb_pos, kb_size), font, gap)
+        self.keyboard = SimpleKeyboard(
+            quiz.labels, pygame.Rect(kb_pos, kb_size), font, gap
+        )
         self.quiz = quiz
 
     def draw(self):
@@ -221,4 +224,6 @@ class UI:
 
 if __name__ == "__main__":
 
-    UI("Test", Quiz(), 100, 10, 20).run()
+    solfege = ("Do", "Di", "Re", "Ri", "Mi", "Fa", "Fe", "Sol", "Si", "La", "Li", "Ti")
+
+    UI("Test", Quiz(solfege), 100, 10, 20).run()
