@@ -84,12 +84,20 @@ class Key:
             ui.fire_key_released(self)
 
 
+class Quiz:
+    def check_answer(self, key):
+        print(f"Key {key.note} played.")
+        # Pop expected answer off queue. If matches, either generate a
+        # new question or do nothing (if running on a timer). If not
+        # correct, then play blat and restart quiz.
+
+
 class UI:
 
     KEY_PLAYED = pygame.USEREVENT
     KEY_RELEASED = KEY_PLAYED + 1
 
-    def __init__(self, name, box_size, gap, padding):
+    def __init__(self, name, quiz, box_size, gap, padding):
         pygame.init()
         pygame.display.set_caption(name)
 
@@ -104,6 +112,7 @@ class UI:
         self.running = False
         self.screen = pygame.display.set_mode(self.size)
         self.keyboard = SimpleKeyboard(pygame.Rect(kb_pos, kb_size), font, gap)
+        self.quiz = quiz
 
     def draw(self):
         background = pygame.Surface(self.size)
@@ -111,27 +120,49 @@ class UI:
         self.screen.blit(background, (0, 0))
         self.keyboard.draw(self.screen)
 
-    def dispatch_event(self, e):
-        if is_quit(e):
-            self.running = False
-        elif e.type == pygame.MOUSEBUTTONDOWN:
-            self.keyboard.handle_event(e, self)
-        elif e.type == pygame.MOUSEBUTTONUP:
-            self.keyboard.handle_event(e, self)
-        elif e.type == UI.KEY_PLAYED:
-            print(f"Key {e.key.note} played.")
-        elif e.type == UI.KEY_RELEASED:
-            print(f"Key {e.key.note} released.")
-        return True
+    def dispatch_events(self):
+        for e in pygame.event.get():
+            if is_quit(e):
+                self.running = False
+            elif e.type == pygame.MOUSEBUTTONDOWN:
+                self.keyboard.handle_event(e, self)
+            elif e.type == pygame.MOUSEBUTTONUP:
+                self.keyboard.handle_event(e, self)
+            elif e.type == UI.KEY_PLAYED:
+                self.quiz.check_answer(e.key)
+            elif e.type == UI.KEY_RELEASED:
+                pass
 
     def run(self):
-        pygame.event.set_blocked(pygame.MOUSEMOTION)
+
+        # Basic quiz loop:
+        # 1. Play the quiz question.
+        # 2. Treat the next key pressed event as the answer.
+        # 3a. If correct, flash key and move to next question.
+        # 3b. If incorrect. flash the correct key and start over.
+        #
+        # Advanced generalization: can play more than one question and
+        # expected key presses are queued and actual key presses clear
+        # the queue if they are correct. Questions can be presented on
+        # a timer and queued until we get too far behind.
+
+        pygame.event.set_blocked(None)  # Block everything.
+        pygame.event.set_allowed(
+            [
+                pygame.QUIT,
+                pygame.KEYDOWN,
+                pygame.MOUSEBUTTONDOWN,
+                pygame.MOUSEBUTTONUP,
+                UI.KEY_PLAYED,
+                UI.KEY_RELEASED,
+            ]
+        )
 
         self.running = True
         while self.running:
             self.draw()
             pygame.display.update()
-            self.dispatch_event(pygame.event.wait())
+            self.dispatch_events()
 
     def fire_key_played(self, key):
         pygame.event.post(pygame.event.Event(UI.KEY_PLAYED, key=key))
@@ -142,4 +173,4 @@ class UI:
 
 if __name__ == "__main__":
 
-    UI("Test", 100, 10, 20).run()
+    UI("Test", Quiz(), 100, 10, 20).run()
