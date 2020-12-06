@@ -26,26 +26,14 @@ class SimpleKeyboard:
         max_width = ((rect.width + gap) / 7) - gap
         max_height = ((rect.height + gap) / 2) - gap
 
-        s = min(max_width, max_height)
-        size = (s, s)
-
+        size = (min(max_width, max_height),) * 2
         self.keys = [
-            pygame.Rect(self.key_pos(k, size), size) for k in SimpleKeyboard.keys
+            Key(k, str(k), self.key_rect(k, size), self.font)
+            for k in SimpleKeyboard.keys
         ]
-        self.rect = pygame.Rect(rect.center, (0, 0)).unionall(self.keys)
 
-    def render_key(self, size, label, pressed):
-        color = (127, 127, 255) if not pressed else (64, 64, 255)
-
-        surface = pygame.Surface(size)
-        pygame.draw.rect(surface, color, pygame.Rect((0, 0), size))
-
-        text, text_rect = self.font.render(label, (0, 0, 0))
-        x = (size[0] - text_rect.width) / 2
-        y = (size[1] - text_rect.height) / 2
-        surface.blit(text, (x, y))
-
-        return surface
+    def key_rect(self, note, size):
+        return pygame.Rect(self.key_pos(note, size), size)
 
     def key_pos(self, note, size):
         if note not in SimpleKeyboard.black_keys:
@@ -58,21 +46,50 @@ class SimpleKeyboard:
             return (x + size[0] / 2, y - (size[1] + self.gap))
 
     def draw(self, parent):
-        for k in range(12):
-            r = self.keys[k]
-            s = self.render_key(r.size, str(k), k in self.pressed)
-            parent.blit(s, r.topleft)
+        for k in self.keys:
+            k.draw(parent)
 
     def handle_event(self, e, ui):
-        for i in range(12):
-            if self.keys[i].collidepoint(e.pos):
-                self.pressed.add(i)
-                ui.key_played(i)
+        for k in self.keys:
+            if k.rect.collidepoint(e.pos):
+                k.handle_event(e, ui)
+                break
+
+
+class Key:
+    def __init__(self, note, label, rect, font):
+        self.note = note
+        self.label = label
+        self.rect = rect
+        self.font = font
+        self.pressed = False
+
+    def draw(self, parent):
+        color = (127, 127, 255) if not self.pressed else (64, 64, 255)
+
+        surface = pygame.Surface(self.rect.size)
+        pygame.draw.rect(surface, color, pygame.Rect((0, 0), self.rect.size))
+
+        text, text_rect = self.font.render(self.label, (0, 0, 0))
+        x = (self.rect.size[0] - text_rect.width) / 2
+        y = (self.rect.size[1] - text_rect.height) / 2
+        surface.blit(text, (x, y))
+
+        parent.blit(surface, self.rect.topleft)
+
+    def handle_event(self, e, ui):
+        if e.type == pygame.MOUSEBUTTONDOWN:
+            self.pressed = True
+            ui.key_played(self)
+        elif e.type == pygame.MOUSEBUTTONUP:
+            self.pressed = False
+            ui.key_released(self)
 
 
 class UI:
 
     KEY_PLAYED = pygame.USEREVENT
+    KEY_RELEASED = KEY_PLAYED + 1
 
     def __init__(self, name, box_size, gap, padding):
         pygame.init()
@@ -101,8 +118,10 @@ class UI:
             self.running = False
         elif e.type == pygame.MOUSEBUTTONDOWN:
             self.keyboard.handle_event(e, self)
+        elif e.type == pygame.MOUSEBUTTONUP:
+            self.keyboard.handle_event(e, self)
         elif e.type == UI.KEY_PLAYED:
-            print(f"Key {e.note} played.")
+            print(f"Key {e.key.note} played.")
         return True
 
     def run(self):
@@ -114,8 +133,11 @@ class UI:
             pygame.display.update()
             self.dispatch_event(pygame.event.wait())
 
-    def key_played(self, note):
-        pygame.event.post(pygame.event.Event(UI.KEY_PLAYED, note=note))
+    def key_played(self, key):
+        pygame.event.post(pygame.event.Event(UI.KEY_PLAYED, key=key))
+
+    def key_released(self, key):
+        pygame.event.post(pygame.event.Event(UI.KEY_RELEASED, key=key))
 
 
 if __name__ == "__main__":
