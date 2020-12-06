@@ -145,7 +145,7 @@ class Quiz:
         sized set of questions out of the universe.
         """
 
-    def choices(self, universe):
+    def make_choices(self, universe):
         """
         From the universe of possible questions, pick an appropriately
         sized subset of choices to present in one question. If the set
@@ -165,7 +165,7 @@ class Quiz:
         Other quizes may create choices that play something in
         relation to the correct answer.
         """
-        choices = self.choices(universe)
+        choices = self.make_choices(universe)
         return random.choice(choices), choices
 
     def run(self):
