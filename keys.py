@@ -14,8 +14,6 @@ class SimpleKeyboard:
 
     white_keys = [0, 2, 4, 5, 7, 9, 11]
 
-    black_keys = set(keys) - set(white_keys)
-
     def __init__(self, rect, font, gap):
         self.rect = rect
         self.font = font
@@ -23,7 +21,7 @@ class SimpleKeyboard:
 
         self.pressed = set()
 
-        max_width = ((rect.width + gap) / 7) - gap
+        max_width = ((rect.width + gap) / len(SimpleKeyboard.white_keys)) - gap
         max_height = ((rect.height + gap) / 2) - gap
 
         size = (min(max_width, max_height),) * 2
@@ -36,7 +34,7 @@ class SimpleKeyboard:
         return pygame.Rect(self.key_pos(note, size), size)
 
     def key_pos(self, note, size):
-        if note not in SimpleKeyboard.black_keys:
+        if note in SimpleKeyboard.white_keys:
             i = SimpleKeyboard.white_keys.index(note)
             x = self.rect.x + (i * (size[0] + self.gap))
             y = self.rect.y + size[1] + self.gap
@@ -80,10 +78,10 @@ class Key:
     def handle_event(self, e, ui):
         if e.type == pygame.MOUSEBUTTONDOWN:
             self.pressed = True
-            ui.key_played(self)
+            ui.fire_key_played(self)
         elif e.type == pygame.MOUSEBUTTONUP:
             self.pressed = False
-            ui.key_released(self)
+            ui.fire_key_released(self)
 
 
 class UI:
@@ -95,7 +93,7 @@ class UI:
         pygame.init()
         pygame.display.set_caption(name)
 
-        keyboard_width = (box_size * 7) + (gap * 6)
+        keyboard_width = (box_size * len(SimpleKeyboard.white_keys)) + (gap * 6)
         keyboard_height = (box_size * 2) + gap
         self.size = ((padding * 2) + keyboard_width, (padding * 2) + keyboard_height)
 
@@ -122,6 +120,8 @@ class UI:
             self.keyboard.handle_event(e, self)
         elif e.type == UI.KEY_PLAYED:
             print(f"Key {e.key.note} played.")
+        elif e.type == UI.KEY_RELEASED:
+            print(f"Key {e.key.note} released.")
         return True
 
     def run(self):
@@ -133,10 +133,10 @@ class UI:
             pygame.display.update()
             self.dispatch_event(pygame.event.wait())
 
-    def key_played(self, key):
+    def fire_key_played(self, key):
         pygame.event.post(pygame.event.Event(UI.KEY_PLAYED, key=key))
 
-    def key_released(self, key):
+    def fire_key_released(self, key):
         pygame.event.post(pygame.event.Event(UI.KEY_RELEASED, key=key))
 
 
