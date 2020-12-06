@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 
+import random
+
 import pygame
 import pygame.freetype
 
+from app import blat
+from app import chirp
 from app import is_quit
+from app import is_replay
+from midi import play
+from music import melody
 
 
 class SimpleKeyboard:
@@ -85,8 +92,40 @@ class Key:
 
 
 class Quiz:
+    def __init__(self):
+        pygame.midi.init()
+        port = pygame.midi.get_default_output_id()
+        self.midi_out = pygame.midi.Output(port, 0)
+        self.asked = []
+
+    def start(self):
+        self.midi_out.set_instrument(0)
+
+    def play(self):
+        note = random.choice(range(12))
+        self.asked.append(note)
+        play(self.midi_out, melody([note]).render(60, 60))
+
+    def replay(self):
+        note = self.asked[0]
+        play(self.midi_out, melody([note]).render(60, 60))
+
+    def quit(self):
+        pygame.midi.quit()
+
     def check_answer(self, key):
-        print(f"Key {key.note} played.")
+        expected = self.asked.pop(0)
+        if expected == key.note:
+            print(f"Key {key.note} played. That is correct.")
+            play(self.midi_out, chirp)
+        else:
+            print(
+                f"Key {key.note} played. That is incorrect. Correct answer was {expected}"
+            )
+            play(self.midi_out, blat)
+
+        self.play()
+
         # Pop expected answer off queue. If matches, either generate a
         # new question or do nothing (if running on a timer). If not
         # correct, then play blat and restart quiz.
@@ -124,6 +163,8 @@ class UI:
         for e in pygame.event.get():
             if is_quit(e):
                 self.running = False
+            elif is_replay(e):
+                self.quiz.replay()
             elif e.type == pygame.MOUSEBUTTONDOWN:
                 self.keyboard.handle_event(e, self)
             elif e.type == pygame.MOUSEBUTTONUP:
@@ -158,11 +199,18 @@ class UI:
             ]
         )
 
-        self.running = True
-        while self.running:
-            self.draw()
-            pygame.display.update()
-            self.dispatch_events()
+        try:
+            self.quiz.start()
+            self.quiz.play()
+
+            self.running = True
+            while self.running:
+                self.draw()
+                pygame.display.update()
+                self.dispatch_events()
+
+        finally:
+            self.quiz.quit()
 
     def fire_key_played(self, key):
         pygame.event.post(pygame.event.Event(UI.KEY_PLAYED, key=key))
