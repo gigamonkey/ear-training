@@ -13,6 +13,14 @@ from music import Scale
 from music import melody
 
 
+def is_mouse_event(e):
+    return e.type in {pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION}
+
+
+def is_key_event(e):
+    return e.type in {pygame.KEYDOWN, pygame.KEYUP}
+
+
 class SimpleKeyboard:
 
     "Abstracted one-octave piano keyboard widget."
@@ -20,6 +28,16 @@ class SimpleKeyboard:
     keys = range(12)
 
     white_keys = [0, 2, 4, 5, 7, 9, 11]
+
+    number_keys = [
+        pygame.K_1,
+        pygame.K_2,
+        pygame.K_3,
+        pygame.K_4,
+        pygame.K_5,
+        pygame.K_6,
+        pygame.K_7,
+    ]
 
     def __init__(self, labels, rect, font, gap):
         self.rect = rect
@@ -53,10 +71,22 @@ class SimpleKeyboard:
             k.draw(parent)
 
     def handle_event(self, e, ui):
-        for k in self.keys:
-            if k.rect.collidepoint(e.pos):
-                k.handle_event(e, ui)
-                break
+        key = None
+
+        if is_mouse_event(e):
+            for k in self.keys:
+                if k.rect.collidepoint(e.pos):
+                    key = k
+                    break
+        elif is_key_event(e) and e.key in SimpleKeyboard.number_keys:
+            i = Scale.major[SimpleKeyboard.number_keys.index(e.key)]
+            key = self.keys[i]
+
+        if key is not None:
+            if e.type in {pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN}:
+                ui.fire_key_played(key)
+            elif e.type in {pygame.MOUSEBUTTONUP, pygame.KEYUP}:
+                ui.fire_key_released(key)
 
 
 class Key:
@@ -87,12 +117,6 @@ class Key:
 
     def lowlight(self):
         self.color = (64, 64, 255)
-
-    def handle_event(self, e, ui):
-        if e.type == pygame.MOUSEBUTTONDOWN:
-            ui.fire_key_played(self)
-        elif e.type == pygame.MOUSEBUTTONUP:
-            ui.fire_key_released(self)
 
 
 class Quiz:
@@ -186,9 +210,7 @@ class UI:
                 self.running = False
             elif is_replay(e):
                 self.quiz.replay()
-            elif e.type == pygame.MOUSEBUTTONDOWN:
-                self.keyboard.handle_event(e, self)
-            elif e.type == pygame.MOUSEBUTTONUP:
+            elif is_mouse_event(e) or is_key_event(e):
                 self.keyboard.handle_event(e, self)
             elif e.type == UI.KEY_PLAYED:
                 self.quiz.handle_event(e, self)
@@ -213,19 +235,22 @@ class UI:
         pygame.event.set_blocked(None)  # Block everything.
         pygame.event.set_allowed(
             [
-                pygame.QUIT,
-                pygame.KEYDOWN,
-                pygame.MOUSEBUTTONDOWN,
-                pygame.MOUSEBUTTONUP,
                 UI.KEY_PLAYED,
                 UI.KEY_RELEASED,
                 UI.NEXT_NOTE,
+                pygame.KEYDOWN,
+                pygame.KEYUP,
+                pygame.MOUSEBUTTONDOWN,
+                pygame.MOUSEBUTTONUP,
+                pygame.QUIT,
             ]
         )
 
         try:
+            self.draw()
             self.quiz.start()
 
+            # Kick off the first note.
             self.fire_next_note()
 
             self.running = True
