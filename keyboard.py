@@ -5,6 +5,8 @@
 import pygame
 import pygame.midi
 
+from app import is_quit
+
 #
 # Keycodes ignoring keybooard layout (Qwerty vs Dvorak). No doubt this
 # will break on certain keyboards. Goal is to make a piano like
@@ -50,15 +52,17 @@ chromatic_scancodes = [
 ]
 
 
-def make_key_mapping(scancodes, start_note):
-    return {code: start_note + i for i, code in enumerate(scancodes)}
+key_mapping = {code: i for i, code in enumerate(chromatic_scancodes)}
+
+
+def get_note(e):
+    if e.type in {pygame.KEYDOWN, pygame.KEYUP}:
+        return key_mapping.get(e.scancode)
 
 
 def main():
 
     start_note = 60
-
-    key_mapping = make_key_mapping(chromatic_scancodes, start_note)
 
     pygame.init()
     pygame.midi.init()
@@ -73,22 +77,19 @@ def main():
 
         while True:
             e = pygame.event.wait()
-            if e.type == pygame.QUIT:
-                break
-            elif e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_ESCAPE:
-                    break
 
-                if note := key_mapping.get(e.scancode):
+            if is_quit(e):
+                break
+            elif (note := get_note(e)) is not None:
+                note += start_note
+                if e.type == pygame.KEYDOWN:
                     if note not in on_notes:
                         print(note)
                         midi_out.note_on(note, 127)
                         on_notes.add(note)
-                else:
-                    print(e.scancode)
-
-            elif e.type == pygame.KEYUP:
-                if note := key_mapping.get(e.scancode):
+                    else:
+                        print(e.scancode)
+                elif e.type == pygame.KEYUP:
                     if note in on_notes:
                         midi_out.note_off(note, 0)
                         on_notes.remove(note)

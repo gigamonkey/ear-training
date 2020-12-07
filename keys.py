@@ -8,6 +8,7 @@ import pygame.freetype
 
 from app import is_quit
 from app import is_replay
+from keyboard import get_note
 from midi import play
 from music import Scale
 from music import melody
@@ -78,6 +79,10 @@ class SimpleKeyboard:
                 if k.rect.collidepoint(e.pos):
                     key = k
                     break
+
+        elif (note := get_note(e)) is not None:
+            key = self.keys[note % 12]
+
         elif is_key_event(e) and e.key in SimpleKeyboard.number_keys:
             i = Scale.major[SimpleKeyboard.number_keys.index(e.key)]
             key = self.keys[i]
