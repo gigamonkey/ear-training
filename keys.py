@@ -6,11 +6,13 @@ import random
 import pygame
 import pygame.freetype
 
+import keyboard
 from app import is_quit
 from app import is_replay
-from keyboard import get_note
+from app import silence
 from midi import play
 from music import Scale
+from music import chord
 from music import melody
 
 
@@ -80,7 +82,7 @@ class SimpleKeyboard:
                     key = k
                     break
 
-        elif (note := get_note(e)) is not None:
+        elif (note := keyboard.get_note(e)) is not None:
             key = self.keys[note % 12]
 
         elif is_key_event(e) and e.key in SimpleKeyboard.number_keys:
@@ -89,8 +91,10 @@ class SimpleKeyboard:
 
         if key is not None:
             if e.type in {pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN}:
+                key.lowlight()
                 ui.fire_key_played(key)
             elif e.type in {pygame.MOUSEBUTTONUP, pygame.KEYUP}:
+                key.unlight()
                 ui.fire_key_released(key)
 
 
@@ -168,12 +172,10 @@ class Quiz:
             self.last_key.unlight()
         self.last_key = key
         if expected == key.note:
-            # key.highlight()
             pass
         else:
-            # play(self.midi_out, blat)
-            key.lowlight()
-            self.last_key = key
+            blonk = (chord((key.note, expected)) + silence(1 / 4))
+            play(self.midi_out, blonk.render(60, 120))
             self.retry = expected
 
 
