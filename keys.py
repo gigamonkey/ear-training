@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 import random
 
 import pygame
@@ -58,6 +57,12 @@ class ChromaticKeyboard:
             for k in ChromaticKeyboard.keys
         ]
 
+    @classmethod
+    def preferred_size(self, key_size, gap):
+        width = (key_size * len(ChromaticKeyboard.white_keys)) + (gap * 6)
+        height = (key_size * 2) + gap
+        return (width, height)
+
     def key_rect(self, note, size):
         return pygame.Rect(self.key_pos(note, size), size)
 
@@ -100,6 +105,78 @@ class ChromaticKeyboard:
                 ui.fire_key_released(key)
 
 
+class DiatonicKeyboard:
+
+    "Abstracted one-octave diatonic keyboard widget."
+
+    keys = range(7)
+
+    number_keys = [
+        pygame.K_1,
+        pygame.K_2,
+        pygame.K_3,
+        pygame.K_4,
+        pygame.K_5,
+        pygame.K_6,
+        pygame.K_7,
+    ]
+
+    def __init__(self, labels, rect, font, gap):
+        print(f"Keyboard rect: {rect}")
+        self.rect = rect
+        self.font = font
+        self.gap = gap
+
+        max_width = ((rect.width + gap) / len(DiatonicKeyboard.keys)) - gap
+        max_height = rect.height
+
+        size = (min(max_width, max_height),) * 2
+        self.keys = [
+            Key(k, labels[k], self.key_rect(k, size), self.font)
+            for k in DiatonicKeyboard.keys
+        ]
+
+    @classmethod
+    def preferred_size(self, key_size, gap):
+        width = (key_size * len(DiatonicKeyboard.keys)) + (gap * 6)
+        height = key_size
+        return (width, height)
+
+    def key_rect(self, note, size):
+        return pygame.Rect(self.key_pos(note, size), size)
+
+    def key_pos(self, note, size):
+        x = self.rect.x + (note * (size[0] + self.gap))
+        return (x, self.rect.y)
+
+    def draw(self, parent):
+        for k in self.keys:
+            k.draw(parent)
+
+    def handle_event(self, e, ui):
+        key = None
+
+        if is_mouse_event(e):
+            for k in self.keys:
+                if k.rect.collidepoint(e.pos):
+                    key = k
+                    break
+
+        elif (note := keyboard.get_diatonic_note(e)) is not None:
+            key = self.keys[note % 7]
+
+        elif is_key_event(e) and e.key in DiatonicKeyboard.number_keys:
+            key = self.keys[DiatonicKeyboard.number_keys.index(e.key)]
+
+        if key is not None:
+            if e.type in {pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN}:
+                key.lowlight()
+                ui.fire_key_played(key)
+            elif e.type in {pygame.MOUSEBUTTONUP, pygame.KEYUP}:
+                key.unlight()
+                ui.fire_key_released(key)
+
+
 class Key:
     def __init__(self, note, label, rect, font):
         self.note = note
@@ -131,86 +208,119 @@ class Key:
 
 
 class Quiz:
-    def __init__(self, labels):
+
+    """
+    Keyboard driven quiz: questions are somehow tied to keys on a
+    keyboard. One or more questions are played and then the user needs
+    to identify them via the keyboard widget.
+    """
+
+    def __init__(self, labels, player):
         self.labels = labels
+        self.player = player
         self.asked = None
         self.answered = []
-        self.retry = None
-        self.last_key = None
 
     def start(self):
-        pygame.midi.init()
-        port = pygame.midi.get_default_output_id()
-        self.midi_out = pygame.midi.Output(port, 0)
-        self.midi_out.set_instrument(0)
-        self.play_notes([0])
+        self.player.establish_key()
 
-    def play(self, notes):
-        if self.retry:
-            self.asked = self.retry
-            self.retry = None
-        else:
-            self.asked = [random.choice(Scale.major) for i in range(notes)]
+    def next_question(self, num):
+        self.asked = [random.choice(range(len(self.labels))) for i in range(num)]
 
-        self.play_notes(self.asked)
-
-    def play_notes(self, notes):
-        play(self.midi_out, melody(notes).render(60, 60))
-
-    def replay(self):
-        play(self.midi_out, melody(self.asked).render(60, 60))
-
-    def quit(self):
-        pygame.midi.quit()
+    def play(self):
+        self.player.play(self.asked)
 
     def handle_event(self, e, ui):
-        self.check_answer(e.key)
-        if not self.asked:
-            ui.fire_next_note()
+        if self.check_answer(e.key):
+            ui.fire_next_question()
 
     def check_answer(self, key):
         self.answered.append(key.note)
+
         if len(self.answered) == len(self.asked):
-            expected = self.asked
-            got = self.answered
-            self.asked = None
-            self.answered = []
-            if expected != got:
-                blonk = Sequence(
-                    [
-                        chord([a, b]) if a != b else Note(a)
-                        for a, b in zip(expected, got)
-                    ]
-                ) + silence(1 / 4)
-                play(self.midi_out, blonk.render(60, 120))
-                self.retry = expected
+            # print(f"Asked: {' '.join([self.labels[i] for i in self.asked])}")
+            # print(f"Answered: {' '.join([self.labels[i] for i in self.answered])}")
+            if self.asked == self.answered:
+                # maybe indicate correct answer somehow.
+                self.asked = []
+                self.answered = []
+                return True
+            else:
+                self.player.blonk(self.asked, self.answered)
+                self.answered = []
+
         else:
-            print(
-                f"Got key {key.note}; waiting for {len(self.asked) - len(self.answered)} more."
-            )
+            note = key.note
+            to_go = len(self.asked) - len(self.answered)
+            print(f"Got key {note}; waiting for {to_go} more.")
+
+        return False
+
+
+class Player:
+
+    """
+    Player knows how to translate from the Quiz indices (which are
+    mapped to Keyboard keys) to actual questions, maybe actual notes
+    of a scale or chords or whatever.
+    """
+
+    def establish_key(self):
+        "Play something to establish the key."
+
+    def play(self, elements):
+        "Play a sequence of questions. Elements are indexes into the labels array."
+
+
+class ScalePlayer(Player):
+    def __init__(self, midi_out, scale):
+        self.midi_out = midi_out
+        self.scale = scale
+
+    def establish_key(self):
+        play(self.midi_out, melody([0, 12]).render(60, 60))
+
+    def note(self, i):
+        return self.scale[i]
+
+    def play(self, elements):
+        play(self.midi_out, melody([self.note(i) for i in elements]).render(60, 60))
+
+    def blonk(self, asked, answered):
+        def x(a, b):
+            if a != b:
+                return chord([self.note(a), self.note(b)])
+            else:
+                return Note(self.note(a))
+
+        blonk = Sequence([x(a, b) for a, b in zip(asked, answered)])
+        play(self.midi_out, (blonk + silence(0.25)).render(60, 120))
 
 
 class UI:
 
     KEY_PLAYED = pygame.USEREVENT
     KEY_RELEASED = KEY_PLAYED + 1
-    NEXT_NOTE = KEY_RELEASED + 1
+    NEXT_QUESTION = KEY_RELEASED + 1
 
     def __init__(self, name, quiz, box_size, gap, padding):
         pygame.init()
         pygame.display.set_caption(name)
 
-        keyboard_width = (box_size * len(ChromaticKeyboard.white_keys)) + (gap * 6)
-        keyboard_height = (box_size * 2) + gap
-        self.size = ((padding * 2) + keyboard_width, (padding * 2) + keyboard_height)
+        keyboard_class = (
+            DiatonicKeyboard if len(quiz.labels) == 7 else ChromaticKeyboard
+        )
 
+        kb_size = keyboard_class.preferred_size(box_size, gap)
         kb_pos = (padding, padding)
-        kb_size = (keyboard_width, keyboard_height)
+
+        self.size = ((padding * 2) + kb_size[0], (padding * 2) + kb_size[1])
+
         font = pygame.freetype.SysFont("helveticaneue", 32)
 
         self.running = False
         self.screen = pygame.display.set_mode(self.size)
-        self.keyboard = ChromaticKeyboard(
+        self.keyboard = keyboard_class(
             quiz.labels, pygame.Rect(kb_pos, kb_size), font, gap
         )
         self.quiz = quiz
@@ -227,35 +337,25 @@ class UI:
             if is_quit(e):
                 self.running = False
             elif is_replay(e):
-                self.quiz.replay()
+                self.quiz.play()
             elif is_mouse_event(e) or is_key_event(e):
                 self.keyboard.handle_event(e, self)
             elif e.type == UI.KEY_PLAYED:
                 self.quiz.handle_event(e, self)
             elif e.type == UI.KEY_RELEASED:
                 pass
-            elif e.type == UI.NEXT_NOTE:
-                self.quiz.play(2)
+            elif e.type == UI.NEXT_QUESTION:
+                self.quiz.next_question(2)
+                self.quiz.play()
 
     def run(self):
-
-        # Basic quiz loop:
-        # 1. Play the quiz question.
-        # 2. Treat the next key pressed event as the answer.
-        # 3a. If correct, flash key and move to next question.
-        # 3b. If incorrect. flash the correct key and start over.
-        #
-        # Advanced generalization: can play more than one question and
-        # expected key presses are queued and actual key presses clear
-        # the queue if they are correct. Questions can be presented on
-        # a timer and queued until we get too far behind.
 
         pygame.event.set_blocked(None)  # Block everything.
         pygame.event.set_allowed(
             [
                 UI.KEY_PLAYED,
                 UI.KEY_RELEASED,
-                UI.NEXT_NOTE,
+                UI.NEXT_QUESTION,
                 pygame.KEYDOWN,
                 pygame.KEYUP,
                 pygame.MOUSEBUTTONDOWN,
@@ -269,7 +369,7 @@ class UI:
             self.quiz.start()
 
             # Kick off the first note.
-            self.fire_next_note()
+            self.fire_next_question()
 
             self.running = True
             while self.running:
@@ -277,10 +377,10 @@ class UI:
                 self.dispatch_events()
 
         finally:
-            self.quiz.quit()
+            pygame.midi.quit()
 
-    def fire_next_note(self):
-        pygame.event.post(pygame.event.Event(UI.NEXT_NOTE))
+    def fire_next_question(self):
+        pygame.event.post(pygame.event.Event(UI.NEXT_QUESTION))
 
     def fire_key_played(self, key):
         pygame.event.post(pygame.event.Event(UI.KEY_PLAYED, key=key))
@@ -289,8 +389,26 @@ class UI:
         pygame.event.post(pygame.event.Event(UI.KEY_RELEASED, key=key))
 
 
+def open_midi_out():
+    pygame.midi.init()
+    port = pygame.midi.get_default_output_id()
+    midi_out = pygame.midi.Output(port, 0)
+    midi_out.set_instrument(0)
+    return midi_out
+
+
 if __name__ == "__main__":
 
-    solfege = ("Do", "Di", "Re", "Ri", "Mi", "Fa", "Fe", "Sol", "Si", "La", "Li", "Ti")
+    midi_out = open_midi_out()
 
-    UI("Test", Quiz(solfege), 100, 10, 20).run()
+    quiz = Quiz(
+        ("Do", "Re", "Mi", "Fa", "Sol", "La", "Ti"),
+        ScalePlayer(open_midi_out(), Scale.major),
+    )
+
+    chromatic_quiz = Quiz(
+        ("Do", "Di", "Re", "Ri", "Mi", "Fa", "Fe", "Sol", "Si", "La", "Li", "Ti"),
+        ScalePlayer(midi_out, list(range(12))),
+    )
+
+    UI("Solfege", quiz, 100, 10, 20).run()
