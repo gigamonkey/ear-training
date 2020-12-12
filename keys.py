@@ -11,7 +11,9 @@ from app import is_quit
 from app import is_replay
 from app import silence
 from midi import play
+from music import Note
 from music import Scale
+from music import Sequence
 from music import chord
 from music import melody
 
@@ -131,7 +133,8 @@ class Key:
 class Quiz:
     def __init__(self, labels):
         self.labels = labels
-        self.asked = []
+        self.asked = None
+        self.answered = []
         self.retry = None
         self.last_key = None
 
@@ -140,43 +143,51 @@ class Quiz:
         port = pygame.midi.get_default_output_id()
         self.midi_out = pygame.midi.Output(port, 0)
         self.midi_out.set_instrument(0)
-        self.play_note(0)
+        self.play_notes([0])
 
-    def play(self):
+    def play(self, notes):
         if self.retry:
-            note = self.retry
+            self.asked = self.retry
             self.retry = None
         else:
-            note = random.choice(Scale.major)
+            self.asked = [random.choice(Scale.major) for i in range(notes)]
 
-        self.asked.append(note)
-        self.play_note(note)
+        self.play_notes(self.asked)
 
-    def play_note(self, note):
-        play(self.midi_out, melody([note]).render(60, 60))
+    def play_notes(self, notes):
+        play(self.midi_out, melody(notes).render(60, 60))
 
     def replay(self):
-        note = self.asked[0]
-        play(self.midi_out, melody([note]).render(60, 60))
+        play(self.midi_out, melody(self.asked).render(60, 60))
 
     def quit(self):
         pygame.midi.quit()
 
     def handle_event(self, e, ui):
         self.check_answer(e.key)
-        ui.fire_next_note()
+        if not self.asked:
+            ui.fire_next_note()
 
     def check_answer(self, key):
-        expected = self.asked.pop(0)
-        if self.last_key is not None:
-            self.last_key.unlight()
-        self.last_key = key
-        if expected == key.note:
-            pass
+        self.answered.append(key.note)
+        if len(self.answered) == len(self.asked):
+            expected = self.asked
+            got = self.answered
+            self.asked = None
+            self.answered = []
+            if expected != got:
+                blonk = Sequence(
+                    [
+                        chord([a, b]) if a != b else Note(a)
+                        for a, b in zip(expected, got)
+                    ]
+                ) + silence(1 / 4)
+                play(self.midi_out, blonk.render(60, 120))
+                self.retry = expected
         else:
-            blonk = (chord((key.note, expected)) + silence(1 / 4))
-            play(self.midi_out, blonk.render(60, 120))
-            self.retry = expected
+            print(
+                f"Got key {key.note}; waiting for {len(self.asked) - len(self.answered)} more."
+            )
 
 
 class UI:
@@ -224,7 +235,7 @@ class UI:
             elif e.type == UI.KEY_RELEASED:
                 pass
             elif e.type == UI.NEXT_NOTE:
-                self.quiz.play()
+                self.quiz.play(2)
 
     def run(self):
 
