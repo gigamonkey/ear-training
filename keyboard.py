@@ -6,6 +6,7 @@ import pygame
 import pygame.midi
 
 from app import is_quit
+from music import Scale
 
 #
 # Keycodes ignoring keybooard layout (Qwerty vs Dvorak). No doubt this
@@ -51,13 +52,23 @@ chromatic_scancodes = [
     49,
 ]
 
+diatonic_scancodes = [
+    sc for i, sc in enumerate(chromatic_scancodes) if i % 12 in Scale.major
+]
 
-key_mapping = {code: i for i, code in enumerate(chromatic_scancodes)}
+chomatic_key_mapping = {code: i for i, code in enumerate(chromatic_scancodes)}
+
+diatonic_key_mapping = {code: i for i, code in enumerate(diatonic_scancodes)}
 
 
 def get_note(e):
     if e.type in {pygame.KEYDOWN, pygame.KEYUP}:
-        return key_mapping.get(e.scancode)
+        return chomatic_key_mapping.get(e.scancode)
+
+
+def get_diatonic_note(e):
+    if e.type in {pygame.KEYDOWN, pygame.KEYUP}:
+        return diatonic_key_mapping.get(e.scancode)
 
 
 def main():
