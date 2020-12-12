@@ -26,7 +26,7 @@ def is_key_event(e):
     return e.type in {pygame.KEYDOWN, pygame.KEYUP}
 
 
-class SimpleKeyboard:
+class ChromaticKeyboard:
 
     "Abstracted one-octave piano keyboard widget."
 
@@ -49,21 +49,21 @@ class SimpleKeyboard:
         self.font = font
         self.gap = gap
 
-        max_width = ((rect.width + gap) / len(SimpleKeyboard.white_keys)) - gap
+        max_width = ((rect.width + gap) / len(ChromaticKeyboard.white_keys)) - gap
         max_height = ((rect.height + gap) / 2) - gap
 
         size = (min(max_width, max_height),) * 2
         self.keys = [
             Key(k, labels[k], self.key_rect(k, size), self.font)
-            for k in SimpleKeyboard.keys
+            for k in ChromaticKeyboard.keys
         ]
 
     def key_rect(self, note, size):
         return pygame.Rect(self.key_pos(note, size), size)
 
     def key_pos(self, note, size):
-        if note in SimpleKeyboard.white_keys:
-            i = SimpleKeyboard.white_keys.index(note)
+        if note in ChromaticKeyboard.white_keys:
+            i = ChromaticKeyboard.white_keys.index(note)
             x = self.rect.x + (i * (size[0] + self.gap))
             y = self.rect.y + size[1] + self.gap
             return (x, y)
@@ -87,8 +87,8 @@ class SimpleKeyboard:
         elif (note := keyboard.get_note(e)) is not None:
             key = self.keys[note % 12]
 
-        elif is_key_event(e) and e.key in SimpleKeyboard.number_keys:
-            i = Scale.major[SimpleKeyboard.number_keys.index(e.key)]
+        elif is_key_event(e) and e.key in ChromaticKeyboard.number_keys:
+            i = Scale.major[ChromaticKeyboard.number_keys.index(e.key)]
             key = self.keys[i]
 
         if key is not None:
@@ -200,7 +200,7 @@ class UI:
         pygame.init()
         pygame.display.set_caption(name)
 
-        keyboard_width = (box_size * len(SimpleKeyboard.white_keys)) + (gap * 6)
+        keyboard_width = (box_size * len(ChromaticKeyboard.white_keys)) + (gap * 6)
         keyboard_height = (box_size * 2) + gap
         self.size = ((padding * 2) + keyboard_width, (padding * 2) + keyboard_height)
 
@@ -210,7 +210,7 @@ class UI:
 
         self.running = False
         self.screen = pygame.display.set_mode(self.size)
-        self.keyboard = SimpleKeyboard(
+        self.keyboard = ChromaticKeyboard(
             quiz.labels, pygame.Rect(kb_pos, kb_size), font, gap
         )
         self.quiz = quiz
