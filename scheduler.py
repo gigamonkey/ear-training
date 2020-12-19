@@ -1,7 +1,5 @@
-import dataclasses
 import random
 from collections import defaultdict
-from dataclasses import dataclass
 
 # There are two ways we can have a pool of questions: First, there are
 # multiple base questions, e.g. different degrees of a scale,
@@ -69,40 +67,6 @@ from dataclasses import dataclass
 # position, Diminished in root postion
 
 
-@dataclass(frozen=True)
-class IntervalQuestion:
-
-    root: int
-    steps: int
-    ascending: bool
-
-    names = [
-        "P1",
-        "m2",
-        "M2",
-        "m3",
-        "M3",
-        "P4",
-        "Tritone",
-        "P5",
-        "m6",
-        "M6",
-        "m7",
-        "M7",
-        "P8",
-    ]
-
-    def for_steps(self, steps):
-        return dataclasses.replace(self, steps=steps)
-
-    @property
-    def name(self):
-        return IntervalQuestion.names[self.steps]
-
-    def options(self, in_play):
-        return [self.for_steps(s) for s in sorted({x.steps for x in in_play})]
-
-
 class QuestionScheduler:
     def __init__(self, questions, decay):
         self.questions = iter(questions)
@@ -116,10 +80,14 @@ class QuestionScheduler:
             self.add_next_question()
 
         pop = list(self.scores.keys())
-        weights = [self.limit - self.scores[q] for q in pop]
+        weights = [(self.limit - self.scores[q]) ** 2 for q in pop]
 
-        for a, b in zip(pop, weights):
-            print(f"{a} -> {b}")
+        print("")
+        print(f"{len(self.scores.keys())} current questions.")
+        for a, b in sorted(
+            zip(weights, pop), key=lambda x: (x[0], x[1].label), reverse=True
+        ):
+            print(f"{a:.4f} -> {b.label} {b}")
 
         return random.choices(pop, weights, k=1)[0]
 
@@ -128,58 +96,22 @@ class QuestionScheduler:
 
     def update(self, got, expected):
         if got == expected:
-            self.right(got)
+            self.scores[got] *= self.decay
+            self.scores[got] += 1
         else:
-            self.wrong(got)
-            self.wrong(expected)
-
-    def right(self, question):
-        "This was the question and the user got it right."
-        self.scores[question] = (self.scores[question] * self.decay) + 1
-
-    def wrong(self, question):
-        """
-        Either this was the question and the user got it wrong or it was
-        the wrong choice, in both case we want to reduce the score and
-        thus increase the chance that this question will be asked.
-        """
-        self.scores[question] = (self.scores[question] * self.decay) - 1
+            self.scores[got] *= self.decay
+            self.scores[got] -= 1
+            self.scores[expected] *= self.decay
+            self.scores[expected] -= 1
 
     def needs_new_question(self):
-        return all((self.limit - s) < 1.0 for s in self.scores.values())
+        return all(s > 0.0 for s in self.scores.values())
 
     def add_next_question(self):
         try:
             q = next(self.questions)
+            print(f"Adding {q.label} {q}")
             self.scores[q] = 0.0
             return q
         except StopIteration:
             return None
-
-
-if __name__ == "__main__":
-
-    intervals = range(1, 13)
-    fourths = [n % 12 for n in range(0, (5 * 12), 5)]
-    octaves = [0] + [i * s for i in range(1, 5) for s in (1, -1)]
-    roots = [(r + 60) + (o * 12) for o in octaves for r in fourths]
-    questions = [IntervalQuestion(r, s, True) for r in roots for s in intervals]
-
-    s = QuestionScheduler(questions, 0.5)
-
-    # Draw random question. Make equivalent variants of other base questions.
-    # Present base questions Get user choice. Update scores.
-
-    while True:
-        expected = s.draw()
-
-        options = s.options(expected)
-
-        for i, option in enumerate(options):
-            print(f"{i}: {option.name}")
-
-        if n := input(f"{expected.name}>: "):
-            got = options[int(n)]
-            s.update(got, expected)
-        else:
-            break
