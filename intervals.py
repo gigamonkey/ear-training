@@ -47,18 +47,18 @@ class IntervalQuiz(Quiz):
 
         return list(g())
 
-    def make_questions(self, universe):
+    def make_questions(self, choices):
         """
         Not all the choices here are possible answers as we want every
         choice to be rooted at the same note.
         """
-        low, high = random.choice(universe)
+        low, high = random.choice(choices)
 
         ascending = random.choice((True, False))
 
         choices = [
             IntervalQuestion(
-                name, (low, low + size) if ascending else (low + size, low)
+                name, (low, low + size) if ascending else (high, high - size)
             )
             for size, name in enumerate(intervals)
         ]

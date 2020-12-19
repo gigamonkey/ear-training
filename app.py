@@ -141,9 +141,10 @@ class Quiz:
         question. For simple quizes the universe *is* the set of
         choices and only needs to be generated once. If the universe
         of possible questions is too big to present all at once then
-        the make_questions method can be used to drwa an appropriately
+        the make_questions method can be used to draw an appropriately
         sized set of questions out of the universe.
         """
+        return None
 
     def make_choices(self, universe):
         """
@@ -157,7 +158,7 @@ class Quiz:
         """
         return universe
 
-    def make_questions(self, universe):
+    def make_questions(self, choices):
         """
         From the choices returned by choices() return the actual question
         and the choices. The default implementation is fine for many
@@ -165,8 +166,10 @@ class Quiz:
         Other quizes may create choices that play something in
         relation to the correct answer.
         """
-        choices = self.make_choices(universe)
         return random.choice(choices), choices
+
+    def update(self, choice, question):
+        "Update any count of how we're doing."
 
     def run(self):
 
@@ -199,12 +202,13 @@ class Quiz:
             while running:
 
                 if not wrong:
-                    question, questions = self.make_questions(universe)
+                    choices = self.make_choices(universe)
+                    question, questions = self.make_questions(choices)
 
                 # Draw the screen with the buttons.
                 screen.blit(background, (0, 0))
                 buttons = render_buttons(
-                    screen, questions, pygame.Rect(0, 0, 300, 500), font, wrong
+                    screen, questions, pygame.Rect((0, 0), size), font, wrong
                 )
                 pygame.display.update()
 
@@ -215,16 +219,17 @@ class Quiz:
                 # Wait for events until we get a button click; check the answer.
                 running, choice = get_answer(buttons, question, midi_out)
                 if running:
-                    if choice == question:
-                        play(midi_out, chirp)
-                        question.after_correct(midi_out)
-                        wrong = set()
+                    if choice.label in wrong:
+                        choice.play(midi_out)
                     else:
-                        if choice.label in wrong:
-                            choice.play(midi_out)
+                        if choice == question:
+                            play(midi_out, chirp)
+                            question.after_correct(midi_out)
+                            wrong = set()
                         else:
                             play(midi_out, blat)
                             wrong.add(choice.label)
+                        self.update(choice, question)
 
         finally:
             pygame.midi.quit()
