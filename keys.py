@@ -122,7 +122,6 @@ class DiatonicKeyboard:
     ]
 
     def __init__(self, labels, rect, font, gap):
-        print(f"Keyboard rect: {rect}")
         self.rect = rect
         self.font = font
         self.gap = gap
@@ -306,6 +305,19 @@ class UI:
     def __init__(self, name, quiz, box_size, gap, padding):
         pygame.init()
         pygame.display.set_caption(name)
+        pygame.event.set_blocked(None)  # Block everything.
+        pygame.event.set_allowed(
+            [
+                UI.KEY_PLAYED,
+                UI.KEY_RELEASED,
+                UI.NEXT_QUESTION,
+                pygame.KEYDOWN,
+                pygame.KEYUP,
+                pygame.MOUSEBUTTONDOWN,
+                pygame.MOUSEBUTTONUP,
+                pygame.QUIT,
+            ]
+        )
 
         keyboard_class = (
             DiatonicKeyboard if len(quiz.labels) == 7 else ChromaticKeyboard
@@ -350,21 +362,11 @@ class UI:
 
     def run(self):
 
-        pygame.event.set_blocked(None)  # Block everything.
-        pygame.event.set_allowed(
-            [
-                UI.KEY_PLAYED,
-                UI.KEY_RELEASED,
-                UI.NEXT_QUESTION,
-                pygame.KEYDOWN,
-                pygame.KEYUP,
-                pygame.MOUSEBUTTONDOWN,
-                pygame.MOUSEBUTTONUP,
-                pygame.QUIT,
-            ]
-        )
-
         try:
+            # For some reason when we block events this seems
+            # necessary for mouse up/down events to get through. Not
+            # sure what's going on there
+            pygame.event.clear()
             self.draw()
             self.quiz.start()
 
@@ -403,7 +405,7 @@ if __name__ == "__main__":
 
     quiz = Quiz(
         ("Do", "Re", "Mi", "Fa", "Sol", "La", "Ti"),
-        ScalePlayer(open_midi_out(), Scale.major),
+        ScalePlayer(midi_out, Scale.major),
     )
 
     chromatic_quiz = Quiz(
