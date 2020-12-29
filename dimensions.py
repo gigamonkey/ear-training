@@ -1,5 +1,6 @@
 import random
 from dataclasses import dataclass
+from dataclasses import replace
 from typing import Any
 from typing import List
 from typing import Tuple
@@ -8,11 +9,13 @@ from typing import Tuple
 @dataclass
 class Dimension:
 
+    field: str
     value: Any
     children: List["Dimension"]
 
     decay: float = 0.5
     score: float = 0.0
+    threshold: float = 0.5
     enabled: bool = False
 
     def __post_init__(self):
@@ -24,7 +27,7 @@ class Dimension:
 
     def fill_other_dimensions(self, question):
         if self.children:
-            self.maybe_enable_dimension()
+            self.maybe_enable_variant()
             options = [d for d in self.children if d.enabled]
             weights = [(d.limit - d.score) ** 2 for d in options]
             next_dim = random.choices(options, weights, k=1)[0]
@@ -33,19 +36,26 @@ class Dimension:
             return ()
 
     def set_dimension(self, question):
-        "Implement to set particular value on question."
+        "Set the value of our dimension on the question."
+        setattr(question, self.field, self.value)
 
     def get_dimension(self, question):
         "Extract the value for this dimension from the question."
+        getattr(question, self.field)
 
-    def maybe_enable_dimension(self):
-        "If all the enabled dimensions are positive, enable the next dimension."
+    def maybe_enable_variant(self):
+        "If all the enabled variants of this dimension are positive, enable the next variant."
         for c in self.children:
+            print(f"Checking {c.field} {c.value}")
             if c.enabled:
-                if c.score <= 0.0:
-                    # Still have work to do with currently enabled children.
+                print(
+                    f"{c.field} {c.value}: {c.score} {'needs work' if c.score <= c.threshold else 'ok'}"
+                )
+                if c.score <= c.threshold:
+                    print("Breaking")
                     break
             else:
+                print(f"Enabling {c.field} {c.value}")
                 c.enabled = True
                 break
 
@@ -86,38 +96,6 @@ class RootDimension(Dimension):
                     c.update_score(False)
 
 
-class ChordTypeDimension(Dimension):
-    def set_dimension(self, question):
-        question.chord_type = self.value
-
-    def get_dimension(self, question):
-        return question.chord_type
-
-
-class RootNoteDimension(Dimension):
-    def set_dimension(self, question):
-        question.root_note = self.value
-
-    def get_dimension(self, question):
-        return question.root_note
-
-
-class OctaveDimension(Dimension):
-    def set_dimension(self, question):
-        question.octave = self.value
-
-    def get_dimension(self, question):
-        return question.octave
-
-
-class ChordVoicingDimension(Dimension):
-    def set_dimension(self, question):
-        question.chord_voicing = self.value
-
-    def get_dimension(self, question):
-        return question.chord_voicing
-
-
 @dataclass
 class ChordTypeQuestion:
 
@@ -135,23 +113,23 @@ if __name__ == "__main__":
     chord_voicings = [0, 1, 2]
 
     def chords():
-        return [ChordTypeDimension(c, roots()) for c in chord_types]
+        return [Dimension("chord_type", c, roots()) for c in chord_types]
 
     def roots():
-        return [RootNoteDimension(r, octaves()) for r in root_notes]
+        return [Dimension("root_note", r, octaves()) for r in root_notes]
 
     def octaves():
-        return [OctaveDimension(o, voicings()) for o in octave_numbers]
+        return [Dimension("octave", o, voicings()) for o in octave_numbers]
 
     def voicings():
-        return [ChordVoicingDimension(v, None) for v in chord_voicings]
+        return [Dimension("chord_voicing", v, None) for v in chord_voicings]
 
-    root = RootDimension(None, chords(), enabled=True)
+    root = RootDimension(None, None, chords(), enabled=True)
 
     for i in range(20):
         q = ChordTypeQuestion()
         root.fill(q)
-        got = random.choice((q, None))
+        got = replace(q, chord_type=random.choice(chord_types))
         print(f"{q} -> {got == q}")
         root.update(got, q)
         root.show()

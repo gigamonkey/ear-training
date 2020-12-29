@@ -47,38 +47,6 @@ class IntervalQuestion:
         pass
 
 
-class StepsDimension(Dimension):
-    def set_dimension(self, question):
-        question.steps = self.value
-
-    def get_dimension(self, question):
-        return question.steps
-
-
-class RootNoteDimension(Dimension):
-    def set_dimension(self, question):
-        question.root_note = self.value
-
-    def get_dimension(self, question):
-        return question.root_note
-
-
-class OctaveDimension(Dimension):
-    def set_dimension(self, question):
-        question.octave = self.value
-
-    def get_dimension(self, question):
-        return question.octave
-
-
-class AscendingDimension(Dimension):
-    def set_dimension(self, question):
-        question.ascending = self.value
-
-    def get_dimension(self, question):
-        return question.ascending
-
-
 class IntervalQuiz(Quiz):
     def __init__(self, name):
         super().__init__(name)
@@ -87,18 +55,18 @@ class IntervalQuiz(Quiz):
         fourths = [n % 12 for n in range(0, (5 * 12), 5)]
 
         def steps():
-            return [StepsDimension(c, roots()) for c in range(1, 13)]
+            return [Dimension("steps", c, roots()) for c in range(1, 13)]
 
         def roots():
-            return [RootNoteDimension(r, ascending()) for r in fourths]
+            return [Dimension("root_note", r, ascending()) for r in fourths]
 
         def ascending():
-            return [AscendingDimension(v, octaves()) for v in (True, False)]
+            return [Dimension("ascending", v, octaves()) for v in (True, False)]
 
         def octaves():
-            return [OctaveDimension(o, None) for o in octave_numbers]
+            return [Dimension("octave", o, None) for o in octave_numbers]
 
-        self.root = RootDimension(None, steps(), enabled=True)
+        self.root = RootDimension(None, None, steps(), enabled=True)
 
     def make_questions(self, _):
         expected = IntervalQuestion()
