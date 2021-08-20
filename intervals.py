@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
-"Quiz of intervals."
+"""
+Quiz of intervals using only intervals created from two notes of a
+major scale.
+"""
 
 import random
 from itertools import permutations
