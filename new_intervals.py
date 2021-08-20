@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
-"Quiz of intervals."
+"""
+Quiz of intervals using scheduler that weights questions that
+you've gotten wrong more heavily and adds new questions when you have
+gotten all current questions more right than wrong.
+"""
 
 import dataclasses
 from dataclasses import dataclass
