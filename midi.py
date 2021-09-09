@@ -138,7 +138,7 @@ class Note(Playable):
 
     pitch: int
     duration: float = 1 / 4
-    velocity: int = 127
+    velocity: int = 100
 
     def midi(self, start, root, whole_note):
         note = root + self.pitch
