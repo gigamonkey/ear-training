@@ -11,6 +11,7 @@ import random
 import pygame
 import pygame.freetype
 import pygame.midi
+import pygame.time
 
 from midi import Note
 from midi import play
@@ -18,11 +19,11 @@ from music import Scale
 from music import chord
 from music import melody
 
-size = (300, 500)
-
 initial_button_color = (127, 127, 255)
 
 wrong_button_color = (64, 64, 255)
+
+status_color = (16 * 10, 16 * 10, 255)
 
 
 def silence(duration):
@@ -82,6 +83,50 @@ class Button:
         return self.rect.collidepoint(pos)
 
 
+class Status:
+    def __init__(self, quiz, pos, size, font, screen):
+        self.quiz = quiz
+        self.rect = pygame.Rect(pos, size)
+        self.font = font
+        self.screen = screen
+        self.start_tick = pygame.time.get_ticks()
+
+    def update(self):
+        surface = pygame.Surface(self.rect.size)
+        pygame.draw.rect(
+            surface,
+            status_color,
+            pygame.Rect(0, 0, self.rect.width, self.rect.height),
+        )
+
+        self.draw_clock(surface)
+        self.draw_status(surface)
+
+        self.screen.blit(surface, (self.rect.x, self.rect.y))
+        pygame.display.update()
+
+    def draw_clock(self, surface):
+        text, text_rect = self.font.render(self.time_label(), (0, 0, 0))
+        x = self.rect.width - (text_rect.width + 5)
+        y = (self.rect.height - text_rect.height) / 2
+        surface.blit(text, (x, y))
+
+    def draw_status(self, surface):
+        text, text_rect = self.font.render(self.quiz.status_text(), (0, 0, 0))
+        x = 5
+        y = (self.rect.height - text_rect.height) / 2
+        surface.blit(text, (x, y))
+
+    def time_label(self):
+        ticks = pygame.time.get_ticks()
+        minutes, seconds = divmod((ticks - self.start_tick) // 1000, 60)
+        if minutes >= 60:
+            hours, minutes = divmod(minutes, 60)
+        else:
+            hours = 0
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
 def is_quit(e):
     return e.type == pygame.QUIT or (
         e.type == pygame.KEYDOWN and (e.key in {pygame.K_ESCAPE, pygame.K_q})
@@ -105,14 +150,16 @@ def render_buttons(surface, quiz, rect, font, wrong, gap=5):
     h = ((rect.height + gap) / len(quiz)) - gap
 
     def make_button(q, i):
-        b = Button(q, (0, i * (h + gap)), (rect.width, h), q.label in wrong)
+        b = Button(
+            q, (0, rect.top + (i * (h + gap))), (rect.width, h), q.label in wrong
+        )
         b.render(surface, font)
         return b
 
     return [make_button(q, i) for i, q in enumerate(quiz)]
 
 
-def get_answer(buttons, question, midi_out):
+def get_answer(buttons, question, midi_out, status):
     while True:
         event = pygame.event.wait()
         if is_quit(event):
@@ -123,6 +170,8 @@ def get_answer(buttons, question, midi_out):
             question.hint(midi_out)
         elif is_establish_key(event):
             play(midi_out, establish_key)
+        elif event.type == pygame.USEREVENT:
+            status.update()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             for b in buttons:
                 if b.is_hit(event.pos):
@@ -141,7 +190,7 @@ class Quiz:
         question. For simple quizes the universe *is* the set of
         choices and only needs to be generated once. If the universe
         of possible questions is too big to present all at once then
-        the make_questions method can be used to draw an appropriately
+        the make_choices method can be used to draw an appropriately
         sized set of questions out of the universe.
         """
         return None
@@ -171,6 +220,9 @@ class Quiz:
     def update(self, choice, question):
         "Update any count of how we're doing."
 
+    def status_text(self):
+        return ""
+
     def run(self):
 
         universe = self.make_universe()
@@ -179,8 +231,17 @@ class Quiz:
         pygame.midi.init()
 
         font = pygame.freetype.SysFont("helveticaneue", 32)
+        status_font = pygame.freetype.SysFont("helveticaneue", 14)
 
         pygame.display.set_caption(self.name)
+
+        size = (300, 500)
+        status_height = 20
+
+        status_padding = 5
+
+        buttons_start = status_height + status_padding
+        buttons_size = (size[0], size[1] - buttons_start)
 
         screen = pygame.display.set_mode(size)
 
@@ -199,6 +260,11 @@ class Quiz:
 
             wrong = set()
 
+            # For updating status
+            pygame.time.set_timer(pygame.USEREVENT, 1000)
+
+            status = Status(self, (0, 0), (size[0], status_height), status_font, screen)
+
             while running:
 
                 if not wrong:
@@ -207,17 +273,17 @@ class Quiz:
 
                 # Draw the screen with the buttons.
                 screen.blit(background, (0, 0))
-                buttons = render_buttons(
-                    screen, questions, pygame.Rect((0, 0), size), font, wrong
-                )
-                pygame.display.update()
+
+                button_rect = pygame.Rect((0, buttons_start), buttons_size)
+                buttons = render_buttons(screen, questions, button_rect, font, wrong)
 
                 # Play the progression
                 pygame.event.clear()
+                status.update()
                 question.play(midi_out)
 
                 # Wait for events until we get a button click; check the answer.
-                running, choice = get_answer(buttons, question, midi_out)
+                running, choice = get_answer(buttons, question, midi_out, status)
                 if running:
                     if choice.label in wrong:
                         choice.play(midi_out)
@@ -232,4 +298,5 @@ class Quiz:
                         self.update(choice, question)
 
         finally:
+            print(f"Time: {status.time_label()}")
             pygame.midi.quit()
