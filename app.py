@@ -159,7 +159,7 @@ def render_buttons(surface, quiz, rect, font, wrong, gap=5):
     return [make_button(q, i) for i, q in enumerate(quiz)]
 
 
-def get_answer(buttons, question, midi_out, status):
+def get_answer(buttons, question, midi_out, status, clock_tick):
     while True:
         event = pygame.event.wait()
         if is_quit(event):
@@ -170,7 +170,7 @@ def get_answer(buttons, question, midi_out, status):
             question.hint(midi_out)
         elif is_establish_key(event):
             play(midi_out, establish_key)
-        elif event.type == pygame.USEREVENT:
+        elif event.type == clock_tick:
             status.update()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             for b in buttons:
@@ -181,6 +181,8 @@ def get_answer(buttons, question, midi_out, status):
 class Quiz:
     def __init__(self, name):
         self.name = name
+        self.clock_tick = pygame.event.custom_type()
+        self.sound_done = pygame.event.custom_type()
 
     def make_universe(self):
         """
@@ -223,6 +225,26 @@ class Quiz:
     def status_text(self):
         return ""
 
+    def correct(self):
+        print(self.correct_sound.play(maxtime=500))
+
+        # Wait for sound to be done.
+        while True:
+            event = pygame.event.wait()
+            if event.type == self.sound_done:
+                pygame.time.wait(300)
+                break
+
+    def wrong(self):
+        print(self.wrong_sound.play(maxtime=500))
+
+        # Wait for sound to be done.
+        while True:
+            event = pygame.event.wait()
+            if event.type == self.sound_done:
+                pygame.time.wait(300)
+                break
+
     def run(self):
 
         universe = self.make_universe()
@@ -253,6 +275,15 @@ class Quiz:
         port = pygame.midi.get_default_output_id()
         midi_out = pygame.midi.Output(port, 0)
 
+        self.correct_sound = pygame.mixer.Sound("bell.wav")
+        self.correct_sound.set_volume(0.10)
+
+        self.wrong_sound = pygame.mixer.Sound("boop.wav")
+        self.wrong_sound.set_volume(0.10)
+
+        channel = pygame.mixer.Channel(0)
+        channel.set_endevent(self.sound_done)
+
         try:
             midi_out.set_instrument(0)
 
@@ -261,7 +292,7 @@ class Quiz:
             wrong = set()
 
             # For updating status
-            pygame.time.set_timer(pygame.USEREVENT, 1000)
+            pygame.time.set_timer(self.clock_tick, 1000)
 
             status = Status(self, (0, 0), (size[0], status_height), status_font, screen)
 
@@ -283,17 +314,19 @@ class Quiz:
                 question.play(midi_out)
 
                 # Wait for events until we get a button click; check the answer.
-                running, choice = get_answer(buttons, question, midi_out, status)
+                running, choice = get_answer(
+                    buttons, question, midi_out, status, self.clock_tick
+                )
                 if running:
                     if choice.label in wrong:
                         choice.play(midi_out)
                     else:
                         if choice == question:
-                            play(midi_out, chirp)
+                            self.correct()
                             question.after_correct(midi_out)
                             wrong = set()
                         else:
-                            play(midi_out, blat)
+                            self.wrong()
                             wrong.add(choice.label)
                         self.update(choice, question)
 
