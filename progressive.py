@@ -90,25 +90,19 @@ class ProgressiveQuiz(Quiz):
         correct_idx = self.index_of(question)
         choice_idx = self.index_of(choice)
 
-        print(f"Stats: {self.asked}")
-
         if correct_idx == choice_idx:
             if self.first_answer:
                 # Only increment scores on the first answer.
                 self.scores[correct_idx] += 1
-                print(f"Increased score at {correct_idx}: {self.scores}")
         else:
             # But can lose points on any wrong answer.
             self.scores[correct_idx] -= 1
             self.scores[choice_idx] -= 1
-            print(f"Decreased scores at {correct_idx} and {choice_idx}: {self.scores}")
 
         if all(s >= self.score_threshold for s in self.scores):
-            print(f"Adding question.")
             self.active += 1
             self.scores.append(0)
             self.asked = [0] * self.active
-            # self.scores = [0] * self.active
 
         self.first_answer = False
 
@@ -117,13 +111,6 @@ class ProgressiveQuiz(Quiz):
             if t.notes == q.notes:
                 return i
         raise Exception(f"Can't find {q}")
-
-    def is_newest(self, question):
-        "Is the question asked the most recently added question."
-        print(
-            f"Checking newest. Question: {question.notes}; latest: {self.templates[self.active - 1]}"
-        )
-        return question.notes == self.templates[self.active - 1].notes
 
 
 @dataclass
