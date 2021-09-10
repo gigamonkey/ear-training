@@ -225,18 +225,8 @@ class Quiz:
     def status_text(self):
         return ""
 
-    def correct(self):
-        print(self.correct_sound.play(maxtime=500))
-
-        # Wait for sound to be done.
-        while True:
-            event = pygame.event.wait()
-            if event.type == self.sound_done:
-                pygame.time.wait(300)
-                break
-
-    def wrong(self):
-        print(self.wrong_sound.play(maxtime=500))
+    def play_and_wait(self, sound):
+        sound.play(maxtime=500)
 
         # Wait for sound to be done.
         while True:
@@ -322,11 +312,11 @@ class Quiz:
                         choice.play(midi_out)
                     else:
                         if choice == question:
-                            self.correct()
+                            self.play_and_wait(self.correct_sound)
                             question.after_correct(midi_out)
                             wrong = set()
                         else:
-                            self.wrong()
+                            self.play_and_wait(self.wrong_sound)
                             wrong.add(choice.label)
                         self.update(choice, question)
 
