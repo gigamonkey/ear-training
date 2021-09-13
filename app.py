@@ -13,30 +13,17 @@ import pygame.freetype
 import pygame.midi
 import pygame.time
 
-from midi import Note
 from midi import play
 from music import Scale
 from music import chord
 from music import melody
+from music import silence
 
 initial_button_color = (127, 127, 255)
 
 wrong_button_color = (64, 64, 255)
 
 status_color = (16 * 10, 16 * 10, 255)
-
-
-def silence(duration):
-    return Note(0, duration, 0)
-
-
-# Played when we get it right.
-chirp = (melody((0, 5, 7, 12, 17, 19, 24)).rhythm(1 / 64) + silence(1 / 4)).render(
-    96, 120
-)
-
-# Played when we get it wrong.
-blat = (chord((0, 1, 2, 3, 4)).rhythm(1 / 32) + silence(1 / 2)).render(30, 120)
 
 
 establish_key = (
@@ -56,6 +43,9 @@ class Question:
 
     def after_correct(self, midi_out):
         "Some quizes want to play something after a correct answer."
+
+    def after_incorrect(self, midi_out, choice):
+        "Some quizes want to play something after an incorrect answer."
 
 
 class Button:
@@ -265,6 +255,7 @@ class Quiz:
         port = pygame.midi.get_default_output_id()
         midi_out = pygame.midi.Output(port, 0)
 
+        pygame.mixer.init()
         self.correct_sound = pygame.mixer.Sound("bell.wav")
         self.correct_sound.set_volume(0.10)
 
@@ -317,6 +308,7 @@ class Quiz:
                             wrong = set()
                         else:
                             self.play_and_wait(self.wrong_sound)
+                            question.after_incorrect(midi_out, choice, question)
                             wrong.add(choice.label)
                         self.update(choice, question)
 

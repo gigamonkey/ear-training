@@ -18,6 +18,11 @@ def melody(pitches):
     return Sequence([Note(n) if n is not None else Rest() for n in pitches])
 
 
+def silence(duration):
+    "Since rests get smooshed out at the end of lines."
+    return Note(0, duration, 0)
+
+
 #
 # Scales - scales are defined by a pattern of notes of one octave
 # represented by a tuple of semitones above the root. E.g. (0, 2, 4,
@@ -156,7 +161,7 @@ chord_types = {
     (0, 4, 7, 10): "Dominant 7th",
     (0, 4, 7, 11): "Major 7th",
     (0, 3, 7, 10): "Minor 7th",
-    (0, 3, 6, 10): "Half-diminished 7th",
+    (0, 3, 6, 10): "Minor 7th, flat 5",
     (0, 3, 6, 9): "Diminished 7th",
 }
 
