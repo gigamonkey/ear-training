@@ -7,6 +7,7 @@ from midi import play
 from music import chord
 from music import chord_types
 from music import melody
+from music import silence
 
 
 @dataclass
@@ -142,6 +143,27 @@ class ChordQuestion:
     def after_correct(self, midi_out):
         pass
 
+    def after_incorrect(self, midi_out, choice, correct):
+        aligned = align_guess(choice.notes, correct.notes)
+        play(midi_out, (chord(aligned) + silence(1 / 4)).render(self.root, 120))
+
+
+def align_guess(guess, actual):
+    if len(guess) <= len(actual):
+        # Slide guess up to see if it matches some part of actual.
+        for i in range((len(actual) - len(guess)) + 1):
+            aligned = tuple(n + actual[i] for n in guess)
+            if aligned == actual[i : i + len(guess)]:
+                return aligned
+    else:
+        # Slide guess down to see if some upper part matches actual.
+        for i in range((len(guess) - len(actual)) + 1):
+            aligned = tuple(n - actual[i] for n in guess)
+            if aligned[i:] == actual:
+                return aligned
+
+    return guess
+
 
 def root_generator():
     while True:
@@ -150,6 +172,7 @@ def root_generator():
 
 if __name__ == "__main__":
 
+    # templates = [ChordTemplate(c) for c in chord_types.keys() if len(c) == 4]
     templates = [ChordTemplate(c) for c in chord_types.keys()]
 
     ProgressiveQuiz("Chords", templates, root_generator(), 3).run()
