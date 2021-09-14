@@ -256,10 +256,10 @@ class Quiz:
         midi_out = pygame.midi.Output(port, 0)
 
         pygame.mixer.init()
-        self.correct_sound = pygame.mixer.Sound("bell.wav")
+        self.correct_sound = pygame.mixer.Sound("sounds/bell.wav")
         self.correct_sound.set_volume(0.10)
 
-        self.wrong_sound = pygame.mixer.Sound("boop.wav")
+        self.wrong_sound = pygame.mixer.Sound("sounds/boop.wav")
         self.wrong_sound.set_volume(0.10)
 
         channel = pygame.mixer.Channel(0)
