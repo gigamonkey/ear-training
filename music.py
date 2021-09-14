@@ -153,16 +153,17 @@ intervals = [
     "Perfect eighth",
 ]
 
+
 chord_types = {
     (0, 4, 7): "Major",
     (0, 3, 7): "Minor",
     (0, 3, 6): "Diminished",
     (0, 4, 8): "Augmented",
-    (0, 4, 7, 10): "Dominant 7th",
-    (0, 4, 7, 11): "Major 7th",
-    (0, 3, 7, 10): "Minor 7th",
-    (0, 3, 6, 10): "Minor 7th, flat 5",
-    (0, 3, 6, 9): "Diminished 7th",
+    (0, 4, 7, 10): "Dominant 7",
+    (0, 4, 7, 11): "Major 7",
+    (0, 3, 7, 10): "Minor 7",
+    (0, 3, 6, 10): "Minor 7♭5",
+    (0, 3, 6, 9): "Diminished 7",
 }
 
 
