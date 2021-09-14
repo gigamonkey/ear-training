@@ -15,3 +15,10 @@ typecheck:
 
 check:
 	python -m  pytest $(PYTEST_OPTIONS)
+
+
+graph.dot: make_graph.py
+	./make_graph.py > $@
+
+graph.pdf: graph.dot
+	dot -T pdf graph.dot -o graph.pdf
