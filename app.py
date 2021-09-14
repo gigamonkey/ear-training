@@ -13,11 +13,13 @@ import pygame.freetype
 import pygame.midi
 import pygame.time
 
+from events import is_establish_key
+from events import is_quit
+from events import is_replay
+from events import is_replay_with_hint
 from midi import play
 from music import Scale
-from music import chord
 from music import melody
-from music import silence
 
 initial_button_color = (127, 127, 255)
 
@@ -44,7 +46,7 @@ class Question:
     def after_correct(self, midi_out):
         "Some quizes want to play something after a correct answer."
 
-    def after_incorrect(self, midi_out, choice):
+    def after_incorrect(self, midi_out, choice, question):
         "Some quizes want to play something after an incorrect answer."
 
 
@@ -115,24 +117,6 @@ class Status:
         else:
             hours = 0
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-
-def is_quit(e):
-    return e.type == pygame.QUIT or (
-        e.type == pygame.KEYDOWN and (e.key in {pygame.K_ESCAPE, pygame.K_q})
-    )
-
-
-def is_replay(e):
-    return e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE
-
-
-def is_replay_with_hint(e):
-    return e.type == pygame.KEYDOWN and e.key == pygame.K_h
-
-
-def is_establish_key(e):
-    return e.type == pygame.KEYDOWN and e.key == pygame.K_k
 
 
 def render_buttons(surface, quiz, rect, font, wrong, gap=5):

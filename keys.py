@@ -6,15 +6,15 @@ import pygame
 import pygame.freetype
 
 import keyboard
-from app import is_quit
-from app import is_replay
-from app import silence
+from events import is_quit
+from events import is_replay
 from midi import play
 from music import Note
 from music import Scale
 from music import Sequence
 from music import chord
 from music import melody
+from music import silence
 
 
 def is_mouse_event(e):

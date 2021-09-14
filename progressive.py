@@ -1,64 +1,20 @@
+#!/usr/bin/env python
+
 import random
 from dataclasses import dataclass
+from dataclasses import replace
 from typing import Tuple
 
+from app import Question
 from app import Quiz
 from midi import play
 from music import chord
 from music import chord_types
 from music import melody
-from music import silence
-
-
-@dataclass
-class UpDown:
-    "Simple score keeper that goes up on correct answers and down on incorrect."
-
-    value: int = 0
-
-    def update(self, correct: bool):
-        self.value += 1 if correct else -1
-
-    def reset(self):
-        self.value = 0
-
-
-@dataclass
-class ExponentialMovingAverage:
-    "Score keeper that maintains an exponential moving average."
-
-    decay: float
-    value: float = 0
-
-    def update(self, correct: bool):
-        self.value *= self.decay
-        self.value += 1 if correct else -1
-
 
 class ProgressiveQuiz(Quiz):
 
-    # List of question templates for all possible questions (e.g.
-    # Major, Minor, Diminished, Augmented, Dominant, Maj7, Min7, etc.)
-
-    # Method to render templates into actual questions. (E.g. template
-    # is chord, rendered by providing a root.)
-
-    # Maintain list of currently applicable templates.
-
-    # Randomly generate instantiation values (root or whatever).
-
-    # Randomly pick one of the currently applicable templates: that's the question.
-
-    # Play the question and get answer.
-
-    # On correct, update score and move on.
-    # On incorrect, update score and (possibly) play choice, and wait for another answer.
-
-    # (As question templates are added, the score threshold to add
-    # another should probably go up or we should only count the
-    # answers on the newest question.
-
-    # If score is high enough (~ 10), add a new template to the applicable set.
+    "A quiz that adds questions as we get existing questions right."
 
     def __init__(self, name, templates, arg_generator, score_threshold):
         super().__init__(name)
@@ -85,7 +41,7 @@ class ProgressiveQuiz(Quiz):
     def make_questions(self, choices):
         idx = random.randrange(len(choices))
         self.asked[idx] += 1
-        return choices[idx], choices
+        return choices[idx], [choices[idx].align(c) for c in choices]
 
     def update(self, choice, question):
         correct_idx = self.index_of(question)
@@ -102,7 +58,8 @@ class ProgressiveQuiz(Quiz):
 
         if all(s >= self.score_threshold for s in self.scores):
             self.active += 1
-            self.scores.append(0)
+            # self.scores.append(0)
+            self.scores = [0] * self.active
             self.asked = [0] * self.active
 
         self.first_answer = False
@@ -125,7 +82,7 @@ class ChordTemplate:
 
 
 @dataclass
-class ChordQuestion:
+class ChordQuestion(Question):
 
     notes: Tuple[int]
     root: int
@@ -143,26 +100,40 @@ class ChordQuestion:
     def after_correct(self, midi_out):
         pass
 
-    def after_incorrect(self, midi_out, choice, correct):
-        aligned = align_guess(choice.notes, correct.notes)
-        play(midi_out, (chord(aligned) + silence(1 / 4)).render(self.root, 120))
+    def align(self, other):
+        # Find the root for the other chord such that common
+        # structures line up. E.g. if self is a major triad (0, 4, 7)
+        # and other is a minor 7th (0, 3, 7, 10) we want the root of
+        # the other to be three semi-tones below the root of self so
+        # that the notes of its top triad lines up with the notes of
+        # our triad.
+        #
+        # Conversely, if self is the m7 and other is the major triad,
+        # we want to shift the root of other up three semitones to
+        # line up the notes.
 
+        self_len = len(self.notes)
+        other_len = len(other.notes)
 
-def align_guess(guess, actual):
-    if len(guess) <= len(actual):
-        # Slide guess up to see if it matches some part of actual.
-        for i in range((len(actual) - len(guess)) + 1):
-            aligned = tuple(n + actual[i] for n in guess)
-            if aligned == actual[i : i + len(guess)]:
-                return aligned
-    else:
-        # Slide guess down to see if some upper part matches actual.
-        for i in range((len(guess) - len(actual)) + 1):
-            aligned = tuple(n - actual[i] for n in guess)
-            if aligned[i:] == actual:
-                return aligned
+        if self_len < other_len:
+            # print("other longer")
+            # Shift other down and see if we can line it up with self.
+            for i in range((other_len - self_len) + 1):
+                other_shifted = tuple(n - other.notes[i] for n in other.notes)
+                # print(f"other_shifted: {other_shifted}")
+                if other_shifted[i : i + self_len] == self.notes:
+                    return replace(other, root=self.root - other.notes[i])
+        elif self_len > other_len:
+            # print("other shorter")
+            # Shift other up
+            for i in range((self_len - other_len) + 1):
+                other_shifted = tuple(n + self.notes[i] for n in other.notes)
+                # print(f"other_shifted: {other_shifted}")
+                if other_shifted == self.notes[i : i + other_len]:
+                    return replace(other, root=self.root + self.notes[i])
 
-    return guess
+        # Same length or couldn't find alignment
+        return other
 
 
 def root_generator():
@@ -172,7 +143,6 @@ def root_generator():
 
 if __name__ == "__main__":
 
-    # templates = [ChordTemplate(c) for c in chord_types.keys() if len(c) == 4]
     templates = [ChordTemplate(c) for c in chord_types.keys()]
 
     ProgressiveQuiz("Chords", templates, root_generator(), 3).run()

@@ -6,7 +6,7 @@ import pygame
 import pygame.midi
 
 import keyboard
-from app import is_quit
+from events import is_quit
 
 if __name__ == "__main__":
 
