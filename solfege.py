@@ -5,10 +5,10 @@
 
 from app import Question
 from app import Quiz
-from app import silence
 from midi import play
 from music import Scale
 from music import melody
+from music import silence
 
 solfege = ("Do", "Re", "Mi", "Fa", "Sol", "La", "Ti", "Do")
 
