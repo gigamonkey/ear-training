@@ -6,7 +6,7 @@ import pygame
 import pygame.freetype
 import pygame.midi
 
-from eartraining import keyboard
+import eartraining.keyboard
 from eartraining.events import is_quit
 from eartraining.events import is_replay
 from eartraining.midi import play
@@ -90,7 +90,7 @@ class ChromaticKeyboard:
                     key = k
                     break
 
-        elif (note := keyboard.get_note(e)) is not None:
+        elif (note := eartraining.keyboard.get_note(e)) is not None:
             key = self.keys[note % 12]
 
         elif is_key_event(e) and e.key in ChromaticKeyboard.number_keys:
@@ -162,7 +162,7 @@ class DiatonicKeyboard:
                     key = k
                     break
 
-        elif (note := keyboard.get_diatonic_note(e)) is not None:
+        elif (note := eartraining.keyboard.get_diatonic_note(e)) is not None:
             key = self.keys[note % 7]
 
         elif is_key_event(e) and e.key in DiatonicKeyboard.number_keys:
