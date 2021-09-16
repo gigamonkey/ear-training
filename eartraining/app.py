@@ -200,6 +200,7 @@ class Quiz:
         return ""
 
     def play_and_wait(self, sound):
+        "Play a non-MIDI sound."
         sound.play(maxtime=500)
 
         # Wait for sound to be done.
