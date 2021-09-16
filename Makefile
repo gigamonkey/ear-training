@@ -22,3 +22,6 @@ graph.dot: make_graph.py
 
 graph.pdf: graph.dot
 	dot -T pdf graph.dot -o graph.pdf
+
+clean:
+	rm -f graph.dot graph.pdf
