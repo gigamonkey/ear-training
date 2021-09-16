@@ -6,14 +6,14 @@ import random
 import sys
 from itertools import permutations
 
-from app import Question
-from app import Quiz
-from midi import play
-from music import Scale
-from music import Sequence
-from music import chord
-from music import inversion
-from music import roman
+from eartraining.app import Question
+from eartraining.app import Quiz
+from eartraining.midi import play
+from eartraining.music import Scale
+from eartraining.music import Sequence
+from eartraining.music import chord
+from eartraining.music import inversion
+from eartraining.music import roman
 
 
 class ProgressionQuestion(Question):

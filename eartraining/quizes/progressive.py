@@ -5,12 +5,13 @@ from dataclasses import dataclass
 from dataclasses import replace
 from typing import Tuple
 
-from app import Question
-from app import Quiz
-from midi import play
-from music import chord
-from music import chord_types
-from music import melody
+from eartraining.app import Question
+from eartraining.app import Quiz
+from eartraining.midi import play
+from eartraining.music import chord
+from eartraining.music import chord_types
+from eartraining.music import melody
+
 
 class ProgressiveQuiz(Quiz):
 

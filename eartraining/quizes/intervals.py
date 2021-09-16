@@ -8,12 +8,12 @@ major scale.
 import random
 from itertools import permutations
 
-from app import Question
-from app import Quiz
-from midi import play
-from music import Scale
-from music import intervals
-from music import melody
+from eartraining.app import Question
+from eartraining.app import Quiz
+from eartraining.midi import play
+from eartraining.music import Scale
+from eartraining.music import intervals
+from eartraining.music import melody
 
 
 class IntervalQuestion(Question):

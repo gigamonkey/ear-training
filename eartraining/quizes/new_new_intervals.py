@@ -6,12 +6,12 @@ import dataclasses
 from dataclasses import dataclass
 from typing import Optional
 
-from app import Quiz
-from dimensions import Dimension
-from dimensions import RootDimension
-from midi import play
-from music import intervals
-from music import melody
+from eartraining.app import Quiz
+from eartraining.dimensions import Dimension
+from eartraining.dimensions import RootDimension
+from eartraining.midi import play
+from eartraining.music import intervals
+from eartraining.music import melody
 
 
 @dataclass

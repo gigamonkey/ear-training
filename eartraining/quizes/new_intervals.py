@@ -9,12 +9,12 @@ gotten all current questions more right than wrong.
 import dataclasses
 from dataclasses import dataclass
 
-from app import Quiz
-from midi import play
-from music import Scale
-from music import intervals
-from music import melody
-from scheduler import QuestionScheduler
+from eartraining.app import Quiz
+from eartraining.midi import play
+from eartraining.music import Scale
+from eartraining.music import intervals
+from eartraining.music import melody
+from eartraining.scheduler import QuestionScheduler
 
 
 @dataclass(frozen=True)

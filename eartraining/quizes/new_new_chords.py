@@ -10,12 +10,12 @@ import dataclasses
 from dataclasses import dataclass
 from typing import Tuple
 
-from app import Quiz
-from midi import play
-from music import chord
-from music import chord_types
-from music import melody
-from scheduler import SetQuestionScheduler
+from eartraining.app import Quiz
+from eartraining.midi import play
+from eartraining.music import chord
+from eartraining.music import chord_types
+from eartraining.music import melody
+from eartraining.scheduler import SetQuestionScheduler
 
 
 @dataclass(frozen=True)

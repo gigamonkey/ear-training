@@ -3,9 +3,9 @@
 from dataclasses import dataclass
 from typing import Tuple
 
-from midi import Note
-from midi import Parallel
-from midi import Sequence
+from eartraining.midi import Note
+from eartraining.midi import Parallel
+from eartraining.midi import Sequence
 
 
 def chord(pitches):

@@ -3,12 +3,12 @@
 "Quiz of scale degrees."
 
 
-from app import Question
-from app import Quiz
-from midi import play
-from music import Scale
-from music import melody
-from music import silence
+from eartraining.app import Question
+from eartraining.app import Quiz
+from eartraining.midi import play
+from eartraining.music import Scale
+from eartraining.music import melody
+from eartraining.music import silence
 
 solfege = ("Do", "Re", "Mi", "Fa", "Sol", "La", "Ti", "Do")
 

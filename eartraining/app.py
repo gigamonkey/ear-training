@@ -13,13 +13,13 @@ import pygame.freetype
 import pygame.midi
 import pygame.time
 
-from events import is_establish_key
-from events import is_quit
-from events import is_replay
-from events import is_replay_with_hint
-from midi import play
-from music import Scale
-from music import melody
+from eartraining.events import is_establish_key
+from eartraining.events import is_quit
+from eartraining.events import is_replay
+from eartraining.events import is_replay_with_hint
+from eartraining.midi import play
+from eartraining.music import Scale
+from eartraining.music import melody
 
 initial_button_color = (127, 127, 255)
 

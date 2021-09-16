@@ -1,3 +1,11 @@
+"""
+Manage a number of dimensions along which we can vary the
+presentation of questions. This should probably not be used for what
+questions we ask but may be useful for adding more complex variant
+ways of presenting the basic question.
+"""
+
+
 import random
 from dataclasses import dataclass
 from dataclasses import replace
