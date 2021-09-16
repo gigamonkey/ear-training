@@ -138,7 +138,7 @@ def classify_interval(a, b):
 
 
 intervals = [
-    "Perfect unison",
+    "Unison",
     "Minor second",
     "Major second",
     "Minor third",
@@ -150,7 +150,7 @@ intervals = [
     "Major sixth",
     "Minor seventh",
     "Major seventh",
-    "Perfect eighth",
+    "Octave",
 ]
 
 

@@ -4,16 +4,6 @@
 
 Identify degrees of major scale in a single key.
 
-## eartraining/quizes/chords.py
-
-Identify basic triads and seventh chords in first inversion in a single key.
-
-## eartraining/quizes/intervals.py
-
-Melodic intervals derived from notes of a major scale. (Gets all
-possible intervals but not every possible pairing of notes from the
-chromatic scale.)
-
 ## eartraining/quizes/progressions.py
 
 Identify chord progressions in a single key. Takes some pains to
@@ -27,6 +17,10 @@ add new questions only after have answered existing ones correctly
 often enough. Uses simple +/- scoring rather than anything more
 complicated. Does not try to weight which questions get asked.
 
-## eartraining/quizes/progressive.py
+## eartraining/quizes/chords.py
 
-Currently a test of all the chord types in eartraining.music.chord_types
+A test of all the chord types in eartraining.music.chord_types
+
+## eartraining/quizes/intervals.py
+
+Melodic intervals from minor second to octave, ascending and descending.

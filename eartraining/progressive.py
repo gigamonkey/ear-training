@@ -29,25 +29,24 @@ class ProgressiveQuiz(Quiz):
         "Ignore the universe."
         args = next(self.arg_generator)
         self.first_answer = True
-        return [t.instantiate(*args) for t in self.templates[: self.active]]
+        ts = enumerate(self.templates[: self.active])
+        return [t.instantiate(i, *args) for i, t in ts]
 
     def make_questions(self, choices):
         idx = random.randrange(len(choices))
         self.asked[idx] += 1
+        # FIXME: align may only apply to chords.
         return choices[idx], [choices[idx].align(c) for c in choices]
 
     def update(self, choice, question):
-        correct_idx = self.index_of(question)
-        choice_idx = self.index_of(choice)
-
-        if correct_idx == choice_idx:
+        if question.idx == choice.idx:
             if self.first_answer:
                 # Only increment scores on the first answer.
-                self.scores[correct_idx] += 1
+                self.scores[question.idx] += 1
         else:
             # But can lose points on any wrong answer.
-            self.scores[correct_idx] -= 1
-            self.scores[choice_idx] -= 1
+            self.scores[question.idx] -= 1
+            self.scores[choice.idx] -= 1
 
         if all(s >= self.score_threshold for s in self.scores):
             self.active += 1
@@ -56,9 +55,3 @@ class ProgressiveQuiz(Quiz):
             self.asked = [0] * self.active
 
         self.first_answer = False
-
-    def index_of(self, q):
-        for i, t in enumerate(self.templates):
-            if t.notes == q.notes:
-                return i
-        raise Exception(f"Can't find {q}")

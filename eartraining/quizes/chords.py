@@ -19,14 +19,15 @@ class ChordTemplate:
 
     notes: Tuple[int, ...]
 
-    def instantiate(self, root):
-        return ChordQuestion(self.notes, root)
+    def instantiate(self, idx, root):
+        return ChordQuestion(idx, self.notes, root)
 
 
 @dataclass
 class ChordQuestion(Question):
 
-    notes: Tuple[int]
+    idx: int
+    notes: Tuple[int, ...]
     root: int
 
     @property
@@ -38,9 +39,6 @@ class ChordQuestion(Question):
 
     def hint(self, midi_out):
         play(midi_out, melody(self.notes).render(self.root, 120))
-
-    def after_correct(self, midi_out):
-        pass
 
     def align(self, other):
         # Find the root for the other chord such that common
