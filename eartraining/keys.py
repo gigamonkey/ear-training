@@ -4,17 +4,18 @@ import random
 
 import pygame
 import pygame.freetype
+import pygame.midi
 
-import keyboard
-from events import is_quit
-from events import is_replay
-from midi import play
-from music import Note
-from music import Scale
-from music import Sequence
-from music import chord
-from music import melody
-from music import silence
+from eartraining import keyboard
+from eartraining.events import is_quit
+from eartraining.events import is_replay
+from eartraining.midi import play
+from eartraining.music import Note
+from eartraining.music import Scale
+from eartraining.music import Sequence
+from eartraining.music import chord
+from eartraining.music import melody
+from eartraining.music import silence
 
 
 def is_mouse_event(e):

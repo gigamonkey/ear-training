@@ -5,8 +5,8 @@
 import pygame
 import pygame.midi
 
-import keyboard
-from events import is_quit
+from eartraining import keyboard
+from eartraining.events import is_quit
 
 if __name__ == "__main__":
 

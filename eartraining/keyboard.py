@@ -4,7 +4,7 @@
 
 import pygame
 
-from music import Scale
+from eartraining.music import Scale
 
 #
 # Keycodes ignoring keybooard layout (Qwerty vs Dvorak). No doubt this

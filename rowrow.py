@@ -6,11 +6,11 @@
 import pygame
 import pygame.midi
 
-from midi import Rest
-from midi import play
-from music import dotted
-from music import melody
-from music import triplet
+from eartraining.midi import Rest
+from eartraining.midi import play
+from eartraining.music import dotted
+from eartraining.music import melody
+from eartraining.music import triplet
 
 
 def make_melody():
