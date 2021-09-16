@@ -1,0 +1,17 @@
+- This is not like a flashcard program where spaced repitition makes
+  sense. At least not at the level of which "question" to ask when the
+  form is to identify the right answer out of a static set of choices
+  because if the odds of a question being asked is a function of how
+  often you get it wrong then you start trying to guess about the
+  probability. Better to make each choice equally likely. (This is
+  mildly annoying when you end up with long runs without any of a
+  given question being asked.)
+
+- Weighting may possibly be useful for variants of questions that
+  don't affect the answer. For example, in a chord identification game
+  where the task is to identify just the basic chord type different
+  voicings are variants and it might be useful to weight which
+  variants are used to keep things challenging--start with simple
+  voicings and then add in more complex voicings and weight which
+  voicing is used based on how often questions using that voicing are
+  correctly identified.

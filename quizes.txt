@@ -1,0 +1,59 @@
+# Simple quizes
+
+## eartraining/quizes/solfege.py
+
+Identify degrees of major scale in a single key.
+
+## eartraining/quizes/chords.py
+
+Identify basic triads and seventh chords in first inversion in a single key.
+
+## eartraining/quizes/intervals.py
+
+Melodic intervals derived from notes of a major scale. (Gets all
+possible intervals but not every possible pairing of notes from the
+chromatic scale.)
+
+## eartraining/quizes/progressions.py
+
+Identify chord progressions in a single key. Takes some pains to
+randomly revoice chords so you can't just listen to the bass note or
+something.
+
+# Progressive quizes
+
+From a set of possible questions (e.g. chord types) start with two and
+add new questions only after have answered existing ones correctly
+often enough. Uses simple +/- scoring rather than anything more
+complicated. Does not try to weight which questions get asked.
+
+## eartraining/quizes/progressive.py
+
+Currently a test of all the chord types in eartraining.music.chord_types
+
+# Question scheduling quizes
+
+Uses eartraining.scheduler to keep track of how user is doing on each
+question and adds in new questions as needed.
+
+## eartraining/quizes/new_intervals.py
+
+All melodic intervals using weighted question scheduler.
+
+## eartraining/quizes/new_new_chords.py
+
+Chord quiz using weighted question scheduler of questions added in
+sets of roots going around the cycle of fourths and different octaves.
+
+# Dimension based quizes.
+
+Uses eartraining.dimensions to bring new variant questions into the mix.
+
+## eartraining/quizes/new_chords.py
+
+Test of many chords using dimensions of types, roots, and octaves.
+
+# eartraining/quizes/new_new_intervals.py
+
+Melodic intervals using dimensions of steps, roots,
+ascending/descending, and octaves.
