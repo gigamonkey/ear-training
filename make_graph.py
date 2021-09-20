@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 
 import os.path
-from os import walk
 import re
-from glob import glob
 from pathlib import Path
 
 from_import = re.compile(r"^from (.*) import")
@@ -11,21 +9,18 @@ module_import = re.compile(r"^import (.*)")
 
 
 def code_name(p):
-    return f"{p.parent}.{p.stem}".replace('/', '.')
+    return f"{p.parent}.{p.stem}".replace("/", ".")
+
 
 def emit_deps(filename):
     with open(filename) as f:
         for line in f:
             if m := (from_import.match(line) or module_import.match(line)):
-                dep = m.group(1)
-                #if Path(f"{dep}.py").exists():
-                yield (code_name(filename), dep)
-
+                yield (code_name(filename), m.group(1))
 
 
 if __name__ == "__main__":
 
-    #ignore = {"rowrow", "test", "music", "midi"}
     ignore = {"eartraining.music", "eartraining.midi"}
 
     deps = set()
