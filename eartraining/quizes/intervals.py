@@ -50,6 +50,9 @@ def arg_generator():
 
 if __name__ == "__main__":
 
-    templates = [IntervalTemplate(d) for d in range(1, 13)]
+    # distances = range(1, 13)
+    distances = [12, 7, 5, 4, 8, 3, 9, 6, 10, 2, 11, 1]
+
+    templates = [IntervalTemplate(d) for d in distances]
 
     ProgressiveQuiz("Intervals", templates, arg_generator(), 3).run()
