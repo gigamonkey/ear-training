@@ -16,6 +16,8 @@ wrong_button_color = (64, 64, 255)
 
 status_color = (16 * 10, 16 * 10, 255)
 
+quit_keys = {pygame.K_ESCAPE, pygame.K_q}
+
 
 def is_mouse_event(e):
     return e.type in {pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION}
@@ -23,6 +25,22 @@ def is_mouse_event(e):
 
 def is_key_event(e):
     return e.type in {pygame.KEYDOWN, pygame.KEYUP}
+
+
+def is_quit(e):
+    return e.type == pygame.QUIT or (e.type == pygame.KEYDOWN and (e.key in quit_keys))
+
+
+def is_replay(e):
+    return e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE
+
+
+def is_replay_with_hint(e):
+    return e.type == pygame.KEYDOWN and e.key == pygame.K_h
+
+
+def is_establish_key(e):
+    return e.type == pygame.KEYDOWN and e.key == pygame.K_k
 
 
 class Button:

@@ -6,8 +6,6 @@ import pygame
 import pygame.freetype
 import pygame.midi
 
-from eartraining.events import is_quit
-from eartraining.events import is_replay
 from eartraining.midi import play
 from eartraining.music import Note
 from eartraining.music import Scale
@@ -19,6 +17,8 @@ from eartraining.ui import ChromaticKeyboard
 from eartraining.ui import DiatonicKeyboard
 from eartraining.ui import is_key_event
 from eartraining.ui import is_mouse_event
+from eartraining.ui import is_quit
+from eartraining.ui import is_replay
 
 
 class Quiz:

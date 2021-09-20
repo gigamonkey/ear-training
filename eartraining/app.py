@@ -13,14 +13,14 @@ import pygame.freetype
 import pygame.midi
 import pygame.time
 
-from eartraining.events import is_establish_key
-from eartraining.events import is_quit
-from eartraining.events import is_replay
-from eartraining.events import is_replay_with_hint
 from eartraining.midi import play
 from eartraining.music import Scale
 from eartraining.music import melody
 from eartraining.ui import Status
+from eartraining.ui import is_establish_key
+from eartraining.ui import is_quit
+from eartraining.ui import is_replay
+from eartraining.ui import is_replay_with_hint
 from eartraining.ui import render_buttons
 
 initial_button_color = (127, 127, 255)

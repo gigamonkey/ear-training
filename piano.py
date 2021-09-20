@@ -6,7 +6,7 @@ import pygame
 import pygame.midi
 
 from eartraining import keyboard
-from eartraining.events import is_quit
+from eartraining.ui import is_quit
 
 if __name__ == "__main__":
 
