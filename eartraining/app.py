@@ -20,6 +20,8 @@ from eartraining.events import is_replay_with_hint
 from eartraining.midi import play
 from eartraining.music import Scale
 from eartraining.music import melody
+from eartraining.ui import Status
+from eartraining.ui import render_buttons
 
 initial_button_color = (127, 127, 255)
 
@@ -48,89 +50,6 @@ class Question:
 
     def after_incorrect(self, midi_out, choice, question):
         "Some quizes want to play something after an incorrect answer."
-
-
-class Button:
-    def __init__(self, question, pos, size, is_wrong):
-        self.question = question
-        self.rect = pygame.Rect(pos, size)
-        self.is_wrong = is_wrong
-
-    def render(self, screen, font):
-        surface = pygame.Surface(self.rect.size)
-        pygame.draw.rect(
-            surface,
-            initial_button_color if not self.is_wrong else wrong_button_color,
-            pygame.Rect(0, 0, self.rect.width, self.rect.height),
-        )
-        text, text_rect = font.render(self.question.label, (0, 0, 0))
-
-        x = (self.rect.width - text_rect.width) / 2
-        y = (self.rect.height - text_rect.height) / 2
-
-        surface.blit(text, (x, y))
-        screen.blit(surface, (self.rect.x, self.rect.y))
-
-    def is_hit(self, pos):
-        return self.rect.collidepoint(pos)
-
-
-class Status:
-    def __init__(self, quiz, pos, size, font, screen):
-        self.quiz = quiz
-        self.rect = pygame.Rect(pos, size)
-        self.font = font
-        self.screen = screen
-        self.start_tick = pygame.time.get_ticks()
-
-    def update(self):
-        surface = pygame.Surface(self.rect.size)
-        pygame.draw.rect(
-            surface,
-            status_color,
-            pygame.Rect(0, 0, self.rect.width, self.rect.height),
-        )
-
-        self.draw_clock(surface)
-        self.draw_status(surface)
-
-        self.screen.blit(surface, (self.rect.x, self.rect.y))
-        pygame.display.update()
-
-    def draw_clock(self, surface):
-        text, text_rect = self.font.render(self.time_label(), (0, 0, 0))
-        x = self.rect.width - (text_rect.width + 5)
-        y = (self.rect.height - text_rect.height) / 2
-        surface.blit(text, (x, y))
-
-    def draw_status(self, surface):
-        text, text_rect = self.font.render(self.quiz.status_text(), (0, 0, 0))
-        x = 5
-        y = (self.rect.height - text_rect.height) / 2
-        surface.blit(text, (x, y))
-
-    def time_label(self):
-        ticks = pygame.time.get_ticks()
-        minutes, seconds = divmod((ticks - self.start_tick) // 1000, 60)
-        if minutes >= 60:
-            hours, minutes = divmod(minutes, 60)
-        else:
-            hours = 0
-        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-
-def render_buttons(surface, quiz, rect, font, wrong, gap=5):
-
-    h = ((rect.height + gap) / len(quiz)) - gap
-
-    def make_button(q, i):
-        b = Button(
-            q, (0, rect.top + (i * (h + gap))), (rect.width, h), q.label in wrong
-        )
-        b.render(surface, font)
-        return b
-
-    return [make_button(q, i) for i, q in enumerate(quiz)]
 
 
 def get_answer(buttons, question, midi_out, status, clock_tick):
