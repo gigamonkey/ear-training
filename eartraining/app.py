@@ -46,25 +46,6 @@ class Question:
         "Some quizes want to play something after an incorrect answer."
 
 
-def get_answer(buttons, question, midi_out, status, clock):
-    while True:
-        event = pygame.event.wait()
-        if is_quit(event):
-            return False, None
-        elif is_replay(event):
-            question.play(midi_out)
-        elif is_replay_with_hint(event):
-            question.hint(midi_out)
-        elif is_establish_key(event):
-            play(midi_out, establish_key)
-        elif event.type == Quiz.CLOCK_TICK:
-            status.update(clock.elapsed())
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            for b in buttons:
-                if b.is_hit(event.pos):
-                    return True, b.question
-
-
 @dataclass
 class Clock:
 
@@ -168,6 +149,30 @@ class Quiz:
 
         return buttons, status
 
+    def open_midi_out(self):
+        pygame.midi.init()
+        port = pygame.midi.get_default_output_id()
+        self.midi_out = pygame.midi.Output(port, 0)
+        self.midi_out.set_instrument(0)
+
+    def get_answer(self, buttons, question, status):
+        while True:
+            event = pygame.event.wait()
+            if is_quit(event):
+                return False, None
+            elif is_replay(event):
+                question.play(self.midi_out)
+            elif is_replay_with_hint(event):
+                question.hint(self.midi_out)
+            elif is_establish_key(event):
+                play(self.midi_out, establish_key)
+            elif event.type == Quiz.CLOCK_TICK:
+                status.update(self.clock.elapsed())
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                for b in buttons:
+                    if b.is_hit(event.pos):
+                        return True, b.question
+
     def run(self):
 
         universe = self.make_universe()
@@ -184,10 +189,9 @@ class Quiz:
 
         try:
             running = True
-
-            midi_out = open_midi_out()
             wrong = set()
 
+            self.open_midi_out()
             self.clock.start()
 
             while running:
@@ -201,38 +205,24 @@ class Quiz:
                 # Play the progression
                 pygame.event.clear()
                 status.update(self.clock.elapsed())
-                question.play(midi_out)
+                question.play(self.midi_out)
 
                 # Wait for events until we get a button click; check the answer.
-                running, choice = get_answer(
-                    buttons,
-                    question,
-                    midi_out,
-                    status,
-                    self.clock,
-                )
+                running, choice = self.get_answer(buttons, question, status)
                 if running:
                     if choice.label in wrong:
-                        choice.play(midi_out)
+                        choice.play(self.midi_out)
                     else:
                         if choice == question:
                             self.play_and_wait(self.correct_sound)
-                            question.after_correct(midi_out)
+                            question.after_correct(self.midi_out)
                             wrong = set()
                         else:
                             self.play_and_wait(self.wrong_sound)
-                            question.after_incorrect(midi_out, choice, question)
+                            question.after_incorrect(self.midi_out, choice, question)
                             wrong.add(choice.label)
                         self.update(choice, question)
 
         finally:
             print(f"Time: {status.time_label(self.clock.elapsed())}")
             pygame.midi.quit()
-
-
-def open_midi_out():
-    pygame.midi.init()
-    port = pygame.midi.get_default_output_id()
-    midi_out = pygame.midi.Output(port, 0)
-    midi_out.set_instrument(0)
-    return midi_out
