@@ -115,8 +115,16 @@ class QuizUI:
         pygame.event.set_blocked(pygame.MOUSEMOTION)
 
         self.size = (300, 500)
+
         self.clock = Clock()
+        self.running = False
         self.screen = pygame.display.set_mode(self.size)
+        status_font = pygame.freetype.SysFont("helveticaneue", 14)
+        self.status_height = 20
+        self.status_padding = 5
+        self.status = Status(
+            self, (0, 0), (self.size[0], self.status_height), status_font, self.screen
+        )
         self.quiz = quiz
 
     def draw(self, questions, wrong):
@@ -124,29 +132,28 @@ class QuizUI:
         background.fill(pygame.Color("#dddddd"))
         self.screen.blit(background, (0, 0))
 
+        # FIXME: should make a ButtonSet widget that can be sized once
+        # and then renders the appropriate set of buttons, basically
+        # as we do here.
+
         font = pygame.freetype.SysFont("helveticaneue", 32)
-        status_font = pygame.freetype.SysFont("helveticaneue", 14)
-
-        status_height = 20
-        status_padding = 5
-        status = Status(
-            self, (0, 0), (self.size[0], status_height), status_font, self.screen
-        )
-
-        buttons_start = status_height + status_padding
+        buttons_start = self.status_height + self.status_padding
         buttons_size = (self.size[0], self.size[1] - buttons_start)
 
         button_rect = pygame.Rect((0, buttons_start), buttons_size)
         buttons = render_buttons(self.screen, questions, button_rect, font, wrong)
+
+        self.status.update(self.clock.elapsed(), self.quiz.status_text())
         pygame.display.update()
 
-        return buttons, status
+        return buttons
 
-    def get_answer(self, buttons, question, status):
+    def get_answer(self, buttons, question):
         while True:
             event = pygame.event.wait()
             if is_quit(event):
-                return False, None
+                self.running = False
+                return None
             elif is_replay(event):
                 question.play(self.midi_out)
             elif is_replay_with_hint(event):
@@ -154,11 +161,11 @@ class QuizUI:
             elif is_establish_key(event):
                 play(self.midi_out, establish_key)
             elif event.type == QuizUI.CLOCK_TICK:
-                status.update(self.clock.elapsed(), self.quiz.status_text())
+                self.status.update(self.clock.elapsed(), self.quiz.status_text())
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 for b in buttons:
                     if b.is_hit(event.pos):
-                        return True, b.question
+                        return b.question
 
     def run(self):
         try:
@@ -168,24 +175,21 @@ class QuizUI:
 
             universe = self.quiz.make_universe()
             wrong = set()
-            running = True
 
-            while running:
+            self.running = True
+            while self.running:
 
                 if not wrong:
                     choices = self.quiz.make_choices(universe)
                     question, questions = self.quiz.make_questions(choices)
 
-                buttons, status = self.draw(questions, wrong)
-
-                # Play the progression
                 pygame.event.clear()
-                status.update(self.clock.elapsed(), self.quiz.status_text())
+                buttons = self.draw(questions, wrong)
                 question.play(self.midi_out)
 
                 # Wait for events until we get a button click; check the answer.
-                running, choice = self.get_answer(buttons, question, status)
-                if running:
+                choice = self.get_answer(buttons, question)
+                if self.running:
                     if choice.label in wrong:
                         choice.play(self.midi_out)
                     else:
