@@ -49,6 +49,8 @@ class Question:
 @dataclass
 class Clock:
 
+    "Keep track of elasped time."
+
     start_tick = None
 
     def start(self):
@@ -65,20 +67,18 @@ class Quiz:
     SOUND_DONE = pygame.event.custom_type()
 
     def __init__(self, name):
-        self.name = name
-        self.size = (300, 500)
-        self.clock = Clock()
-
         pygame.init()
-        pygame.display.set_caption(self.name)
+        pygame.display.set_caption(name)
         pygame.event.set_blocked(pygame.MOUSEMOTION)
 
+        self.size = (300, 500)
+        self.clock = Clock()
         self.screen = pygame.display.set_mode(self.size)
 
     def make_universe(self):
         """
         Make the universe from which make_questions will create a set of
-        questions. This method is only called once and it's result is
+        questions. This method is only called once and its result is
         turned into a set of actual choices each time we present a new
         question. For simple quizes the universe *is* the set of
         choices and only needs to be generated once. If the universe
@@ -146,6 +146,7 @@ class Quiz:
 
         button_rect = pygame.Rect((0, buttons_start), buttons_size)
         buttons = render_buttons(self.screen, questions, button_rect, font, wrong)
+        pygame.display.update()
 
         return buttons, status
 
@@ -173,11 +174,9 @@ class Quiz:
                     if b.is_hit(event.pos):
                         return True, b.question
 
-    def run(self):
-
-        universe = self.make_universe()
-
+    def setup_sound_effects(self):
         pygame.mixer.init()
+
         self.correct_sound = pygame.mixer.Sound("sounds/bell.wav")
         self.correct_sound.set_volume(0.10)
 
@@ -187,12 +186,15 @@ class Quiz:
         channel = pygame.mixer.Channel(0)
         channel.set_endevent(Quiz.SOUND_DONE)
 
+    def run(self):
         try:
-            running = True
-            wrong = set()
-
+            self.setup_sound_effects()
             self.open_midi_out()
             self.clock.start()
+
+            universe = self.make_universe()
+            wrong = set()
+            running = True
 
             while running:
 

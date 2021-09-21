@@ -113,9 +113,9 @@ class ScalePlayer(Player):
 
 class UI:
 
-    KEY_PLAYED = pygame.USEREVENT
-    KEY_RELEASED = KEY_PLAYED + 1
-    NEXT_QUESTION = KEY_RELEASED + 1
+    KEY_PLAYED = pygame.event.custom_type()
+    KEY_RELEASED = pygame.event.custom_type()
+    NEXT_QUESTION = pygame.event.custom_type()
 
     def __init__(self, name, quiz, box_size, gap, padding):
         pygame.init()

@@ -4,11 +4,12 @@
 UI elements.
 """
 
-
 import pygame
 import pygame.freetype
 import pygame.midi
 import pygame.time
+
+from eartraining import keyboard
 
 initial_button_color = (127, 127, 255)
 
@@ -189,7 +190,7 @@ class ChromaticKeyboard:
                     key = k
                     break
 
-        elif (note := eartraining.keyboard.get_note(e)) is not None:
+        elif (note := keyboard.get_note(e)) is not None:
             key = self.keys[note % 12]
 
         elif is_key_event(e) and e.key in ChromaticKeyboard.number_keys:
@@ -261,7 +262,7 @@ class DiatonicKeyboard:
                     key = k
                     break
 
-        elif (note := eartraining.keyboard.get_diatonic_note(e)) is not None:
+        elif (note := keyboard.get_diatonic_note(e)) is not None:
             key = self.keys[note % 7]
 
         elif is_key_event(e) and e.key in DiatonicKeyboard.number_keys:
