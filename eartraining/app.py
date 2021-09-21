@@ -204,7 +204,7 @@ class QuizUI:
                         self.quiz.update(choice, question)
 
         finally:
-            print(f"Time: {status.time_label(self.clock.elapsed())}")
+            print(f"Time: {self.status.time_label(self.clock.elapsed())}")
             pygame.midi.quit()
 
     def setup_sound_effects(self):
