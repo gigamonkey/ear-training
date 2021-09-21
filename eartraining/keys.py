@@ -34,15 +34,17 @@ class Quiz:
         self.player = player
         self.asked = None
         self.answered = []
+        self.midi_out = None
 
-    def start(self):
-        self.player.establish_key()
+    def start(self, midi_out):
+        self.midi_out = midi_out
+        self.player.establish_key(self.midi_out)
 
     def next_question(self, num):
         self.asked = [random.choice(range(len(self.labels))) for i in range(num)]
 
     def play(self):
-        self.player.play(self.asked)
+        self.player.play(self.asked, self.midi_out)
 
     def handle_event(self, e, ui):
         if self.check_answer(e.key):
@@ -60,7 +62,7 @@ class Quiz:
                 self.answered = []
                 return True
             else:
-                self.player.blonk(self.asked, self.answered)
+                self.player.blonk(self.asked, self.answered, self.midi_out)
                 self.answered = []
 
         else:
@@ -71,36 +73,20 @@ class Quiz:
         return False
 
 
-class Player:
-
-    """
-    Player knows how to translate from the Quiz indices (which are
-    mapped to Keyboard keys) to actual questions, maybe actual notes
-    of a scale or chords or whatever.
-    """
-
-    def establish_key(self):
-        "Play something to establish the key."
-
-    def play(self, elements):
-        "Play a sequence of questions. Elements are indexes into the labels array."
-
-
-class ScalePlayer(Player):
-    def __init__(self, midi_out, scale):
-        self.midi_out = midi_out
+class ScalePlayer:
+    def __init__(self, scale):
         self.scale = scale
 
-    def establish_key(self):
-        play(self.midi_out, melody([0, 12]).render(60, 60))
+    def establish_key(self, midi_out):
+        play(midi_out, melody([0, 12]).render(60, 60))
 
     def note(self, i):
         return self.scale[i]
 
-    def play(self, elements):
-        play(self.midi_out, melody([self.note(i) for i in elements]).render(60, 60))
+    def play(self, elements, midi_out):
+        play(midi_out, melody([self.note(i) for i in elements]).render(60, 60))
 
-    def blonk(self, asked, answered):
+    def blonk(self, asked, answered, midi_out):
         def x(a, b):
             if a != b:
                 return chord([self.note(a), self.note(b)])
@@ -108,7 +94,7 @@ class ScalePlayer(Player):
                 return Note(self.note(a))
 
         blonk = Sequence([x(a, b) for a, b in zip(asked, answered)])
-        play(self.midi_out, (blonk + silence(0.25)).render(60, 120))
+        play(midi_out, (blonk + silence(0.25)).render(60, 120))
 
 
 class UI:
@@ -164,7 +150,7 @@ class UI:
             if is_quit(e):
                 self.running = False
             elif is_replay(e):
-                self.quiz.play()
+                self.quiz.play(self.midi_out)
             elif is_mouse_event(e) or is_key_event(e):
                 self.keyboard.handle_event(e, self)
             elif e.type == UI.KEY_PLAYED:
@@ -178,12 +164,14 @@ class UI:
     def run(self):
 
         try:
+            self.open_midi_out()
+
             # For some reason when we block events this seems
             # necessary for mouse up/down events to get through. Not
             # sure what's going on there
             pygame.event.clear()
             self.draw()
-            self.quiz.start()
+            self.quiz.start(self.midi_out)
 
             # Kick off the first note.
             self.fire_next_question()
@@ -205,27 +193,38 @@ class UI:
     def fire_key_released(self, key):
         pygame.event.post(pygame.event.Event(UI.KEY_RELEASED, key=key))
 
-
-def open_midi_out():
-    pygame.midi.init()
-    port = pygame.midi.get_default_output_id()
-    midi_out = pygame.midi.Output(port, 0)
-    midi_out.set_instrument(0)
-    return midi_out
+    def open_midi_out(self):
+        pygame.midi.init()
+        port = pygame.midi.get_default_output_id()
+        self.midi_out = pygame.midi.Output(port, 0)
+        self.midi_out.set_instrument(0)
 
 
 if __name__ == "__main__":
 
-    midi_out = open_midi_out()
-
-    quiz = Quiz(
-        ("Do", "Re", "Mi", "Fa", "Sol", "La", "Ti"),
-        ScalePlayer(midi_out, Scale.major),
+    diatonic_labels = ("Do", "Re", "Mi", "Fa", "Sol", "La", "Ti")
+    chromatic_labels = (
+        "Do",
+        "Di",
+        "Re",
+        "Ri",
+        "Mi",
+        "Fa",
+        "Fe",
+        "Sol",
+        "Si",
+        "La",
+        "Li",
+        "Ti",
     )
 
+    diatonic_quiz = Quiz(
+        diatonic_labels,
+        ScalePlayer(Scale.major),
+    )
     chromatic_quiz = Quiz(
-        ("Do", "Di", "Re", "Ri", "Mi", "Fa", "Fe", "Sol", "Si", "La", "Li", "Ti"),
-        ScalePlayer(midi_out, list(range(12))),
+        chromatic_labels,
+        ScalePlayer(list(range(12))),
     )
 
-    UI("Solfege", quiz, 100, 10, 20).run()
+    UI("Solfege", diatonic_quiz, 100, 10, 20).run()

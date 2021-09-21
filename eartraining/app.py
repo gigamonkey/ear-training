@@ -119,17 +119,6 @@ class QuizUI:
         self.screen = pygame.display.set_mode(self.size)
         self.quiz = quiz
 
-    def play_and_wait(self, sound):
-        "Play a non-MIDI sound."
-        sound.play(maxtime=500)
-
-        # Wait for sound to be done.
-        while True:
-            event = pygame.event.wait()
-            if event.type == QuizUI.SOUND_DONE:
-                pygame.time.wait(300)
-                break
-
     def draw(self, questions, wrong):
         background = pygame.Surface(self.size)
         background.fill(pygame.Color("#dddddd"))
@@ -153,12 +142,6 @@ class QuizUI:
 
         return buttons, status
 
-    def open_midi_out(self):
-        pygame.midi.init()
-        port = pygame.midi.get_default_output_id()
-        self.midi_out = pygame.midi.Output(port, 0)
-        self.midi_out.set_instrument(0)
-
     def get_answer(self, buttons, question, status):
         while True:
             event = pygame.event.wait()
@@ -176,18 +159,6 @@ class QuizUI:
                 for b in buttons:
                     if b.is_hit(event.pos):
                         return True, b.question
-
-    def setup_sound_effects(self):
-        pygame.mixer.init()
-
-        self.correct_sound = pygame.mixer.Sound("sounds/bell.wav")
-        self.correct_sound.set_volume(0.10)
-
-        self.wrong_sound = pygame.mixer.Sound("sounds/boop.wav")
-        self.wrong_sound.set_volume(0.10)
-
-        channel = pygame.mixer.Channel(0)
-        channel.set_endevent(QuizUI.SOUND_DONE)
 
     def run(self):
         try:
@@ -231,3 +202,32 @@ class QuizUI:
         finally:
             print(f"Time: {status.time_label(self.clock.elapsed())}")
             pygame.midi.quit()
+
+    def setup_sound_effects(self):
+        pygame.mixer.init()
+
+        self.correct_sound = pygame.mixer.Sound("sounds/bell.wav")
+        self.correct_sound.set_volume(0.10)
+
+        self.wrong_sound = pygame.mixer.Sound("sounds/boop.wav")
+        self.wrong_sound.set_volume(0.10)
+
+        channel = pygame.mixer.Channel(0)
+        channel.set_endevent(QuizUI.SOUND_DONE)
+
+    def play_and_wait(self, sound):
+        "Play a non-MIDI sound."
+        sound.play(maxtime=500)
+
+        # Wait for sound to be done.
+        while True:
+            event = pygame.event.wait()
+            if event.type == QuizUI.SOUND_DONE:
+                pygame.time.wait(300)
+                break
+
+    def open_midi_out(self):
+        pygame.midi.init()
+        port = pygame.midi.get_default_output_id()
+        self.midi_out = pygame.midi.Output(port, 0)
+        self.midi_out.set_instrument(0)
