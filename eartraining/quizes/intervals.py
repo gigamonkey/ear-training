@@ -4,6 +4,7 @@ import random
 from dataclasses import dataclass
 
 from eartraining.app import Question
+from eartraining.app import QuizUI
 from eartraining.midi import play
 from eartraining.music import intervals
 from eartraining.music import melody
@@ -55,4 +56,4 @@ if __name__ == "__main__":
 
     templates = [IntervalTemplate(d) for d in distances]
 
-    ProgressiveQuiz("Intervals", templates, arg_generator(), 3).run()
+    QuizUI("Intervals", ProgressiveQuiz(templates, arg_generator(), 3)).run()

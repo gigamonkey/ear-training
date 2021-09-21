@@ -55,26 +55,13 @@ class Clock:
 
     def start(self):
         self.start_tick = pygame.time.get_ticks()
-        pygame.time.set_timer(Quiz.CLOCK_TICK, 1000)
+        pygame.time.set_timer(QuizUI.CLOCK_TICK, 1000)
 
     def elapsed(self):
         return pygame.time.get_ticks() - self.start_tick
 
 
 class Quiz:
-
-    CLOCK_TICK = pygame.event.custom_type()
-    SOUND_DONE = pygame.event.custom_type()
-
-    def __init__(self, name):
-        pygame.init()
-        pygame.display.set_caption(name)
-        pygame.event.set_blocked(pygame.MOUSEMOTION)
-
-        self.size = (300, 500)
-        self.clock = Clock()
-        self.screen = pygame.display.set_mode(self.size)
-
     def make_universe(self):
         """
         Make the universe from which make_questions will create a set of
@@ -116,6 +103,22 @@ class Quiz:
     def status_text(self):
         return ""
 
+
+class QuizUI:
+
+    CLOCK_TICK = pygame.event.custom_type()
+    SOUND_DONE = pygame.event.custom_type()
+
+    def __init__(self, name, quiz):
+        pygame.init()
+        pygame.display.set_caption(name)
+        pygame.event.set_blocked(pygame.MOUSEMOTION)
+
+        self.size = (300, 500)
+        self.clock = Clock()
+        self.screen = pygame.display.set_mode(self.size)
+        self.quiz = quiz
+
     def play_and_wait(self, sound):
         "Play a non-MIDI sound."
         sound.play(maxtime=500)
@@ -123,7 +126,7 @@ class Quiz:
         # Wait for sound to be done.
         while True:
             event = pygame.event.wait()
-            if event.type == Quiz.SOUND_DONE:
+            if event.type == QuizUI.SOUND_DONE:
                 pygame.time.wait(300)
                 break
 
@@ -167,8 +170,8 @@ class Quiz:
                 question.hint(self.midi_out)
             elif is_establish_key(event):
                 play(self.midi_out, establish_key)
-            elif event.type == Quiz.CLOCK_TICK:
-                status.update(self.clock.elapsed())
+            elif event.type == QuizUI.CLOCK_TICK:
+                status.update(self.clock.elapsed(), self.quiz.status_text())
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 for b in buttons:
                     if b.is_hit(event.pos):
@@ -184,7 +187,7 @@ class Quiz:
         self.wrong_sound.set_volume(0.10)
 
         channel = pygame.mixer.Channel(0)
-        channel.set_endevent(Quiz.SOUND_DONE)
+        channel.set_endevent(QuizUI.SOUND_DONE)
 
     def run(self):
         try:
@@ -192,21 +195,21 @@ class Quiz:
             self.open_midi_out()
             self.clock.start()
 
-            universe = self.make_universe()
+            universe = self.quiz.make_universe()
             wrong = set()
             running = True
 
             while running:
 
                 if not wrong:
-                    choices = self.make_choices(universe)
-                    question, questions = self.make_questions(choices)
+                    choices = self.quiz.make_choices(universe)
+                    question, questions = self.quiz.make_questions(choices)
 
                 buttons, status = self.draw(questions, wrong)
 
                 # Play the progression
                 pygame.event.clear()
-                status.update(self.clock.elapsed())
+                status.update(self.clock.elapsed(), self.quiz.status_text())
                 question.play(self.midi_out)
 
                 # Wait for events until we get a button click; check the answer.
@@ -223,7 +226,7 @@ class Quiz:
                             self.play_and_wait(self.wrong_sound)
                             question.after_incorrect(self.midi_out, choice, question)
                             wrong.add(choice.label)
-                        self.update(choice, question)
+                        self.quiz.update(choice, question)
 
         finally:
             print(f"Time: {status.time_label(self.clock.elapsed())}")

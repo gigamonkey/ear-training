@@ -9,8 +9,7 @@ class ProgressiveQuiz(Quiz):
 
     "A quiz that adds questions as we get existing questions right."
 
-    def __init__(self, name, templates, arg_generator, score_threshold):
-        super().__init__(name)
+    def __init__(self, templates, arg_generator, score_threshold):
         self.templates = templates
         self.arg_generator = arg_generator
         self.score_threshold = score_threshold

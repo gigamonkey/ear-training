@@ -77,7 +77,7 @@ class Status:
         self.screen = screen
         self.start_tick = pygame.time.get_ticks()
 
-    def update(self, elapsed_ticks):
+    def update(self, elapsed_ticks, text):
         surface = pygame.Surface(self.rect.size)
         pygame.draw.rect(
             surface,
@@ -86,7 +86,7 @@ class Status:
         )
 
         self.draw_clock(surface, elapsed_ticks)
-        self.draw_status(surface)
+        self.draw_status(surface, text)
 
         self.screen.blit(surface, (self.rect.x, self.rect.y))
         pygame.display.update()
@@ -97,8 +97,8 @@ class Status:
         y = (self.rect.height - text_rect.height) / 2
         surface.blit(text, (x, y))
 
-    def draw_status(self, surface):
-        text, text_rect = self.font.render(self.quiz.status_text(), (0, 0, 0))
+    def draw_status(self, surface, text):
+        text, text_rect = self.font.render(text, (0, 0, 0))
         x = 5
         y = (self.rect.height - text_rect.height) / 2
         surface.blit(text, (x, y))

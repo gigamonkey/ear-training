@@ -6,6 +6,7 @@ from dataclasses import replace
 from typing import Tuple
 
 from eartraining.app import Question
+from eartraining.app import QuizUI
 from eartraining.midi import play
 from eartraining.music import chord
 from eartraining.music import chord_types
@@ -83,4 +84,4 @@ if __name__ == "__main__":
 
     templates = [ChordTemplate(c) for c in chord_types.keys()]
 
-    ProgressiveQuiz("Chords", templates, root_generator(), 3).run()
+    QuizUI("Chords", ProgressiveQuiz(templates, root_generator(), 3)).run()
