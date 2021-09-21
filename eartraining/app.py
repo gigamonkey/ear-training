@@ -52,7 +52,7 @@ class Question:
         "Some quizes want to play something after an incorrect answer."
 
 
-def get_answer(buttons, question, midi_out, status, clock_tick):
+def get_answer(buttons, question, midi_out, status, clock_tick, elapsed_ticks):
     while True:
         event = pygame.event.wait()
         if is_quit(event):
@@ -64,7 +64,7 @@ def get_answer(buttons, question, midi_out, status, clock_tick):
         elif is_establish_key(event):
             play(midi_out, establish_key)
         elif event.type == clock_tick:
-            status.update()
+            status.update(elapsed_ticks)
         elif event.type == pygame.MOUSEBUTTONDOWN:
             for b in buttons:
                 if b.is_hit(event.pos):
@@ -76,6 +76,14 @@ class Quiz:
         self.name = name
         self.clock_tick = pygame.event.custom_type()
         self.sound_done = pygame.event.custom_type()
+        self.size = (300, 500)
+
+        pygame.init()
+        pygame.display.set_caption(self.name)
+        pygame.event.set_blocked(pygame.MOUSEMOTION)
+
+        self.screen = pygame.display.set_mode(self.size)
+        self.start_tick = pygame.time.get_ticks()
 
     def make_universe(self):
         """
@@ -129,35 +137,34 @@ class Quiz:
                 pygame.time.wait(300)
                 break
 
-    def run(self):
+    def elapsed_ticks(self):
+        return pygame.time.get_ticks() - self.start_tick
 
-        universe = self.make_universe()
-
-        pygame.init()
-        pygame.midi.init()
+    def draw(self, questions, wrong):
+        background = pygame.Surface(self.size)
+        background.fill(pygame.Color("#dddddd"))
+        self.screen.blit(background, (0, 0))
 
         font = pygame.freetype.SysFont("helveticaneue", 32)
         status_font = pygame.freetype.SysFont("helveticaneue", 14)
 
-        pygame.display.set_caption(self.name)
-
-        size = (300, 500)
         status_height = 20
-
         status_padding = 5
+        status = Status(
+            self, (0, 0), (self.size[0], status_height), status_font, self.screen
+        )
 
         buttons_start = status_height + status_padding
-        buttons_size = (size[0], size[1] - buttons_start)
+        buttons_size = (self.size[0], self.size[1] - buttons_start)
 
-        screen = pygame.display.set_mode(size)
+        button_rect = pygame.Rect((0, buttons_start), buttons_size)
+        buttons = render_buttons(self.screen, questions, button_rect, font, wrong)
 
-        background = pygame.Surface(size)
-        background.fill(pygame.Color("#dddddd"))
+        return buttons, status
 
-        pygame.event.set_blocked(pygame.MOUSEMOTION)
+    def run(self):
 
-        port = pygame.midi.get_default_output_id()
-        midi_out = pygame.midi.Output(port, 0)
+        universe = self.make_universe()
 
         pygame.mixer.init()
         self.correct_sound = pygame.mixer.Sound("sounds/bell.wav")
@@ -170,7 +177,7 @@ class Quiz:
         channel.set_endevent(self.sound_done)
 
         try:
-            midi_out.set_instrument(0)
+            midi_out = open_midi_out()
 
             running = True
 
@@ -179,28 +186,27 @@ class Quiz:
             # For updating status
             pygame.time.set_timer(self.clock_tick, 1000)
 
-            status = Status(self, (0, 0), (size[0], status_height), status_font, screen)
-
             while running:
 
                 if not wrong:
                     choices = self.make_choices(universe)
                     question, questions = self.make_questions(choices)
 
-                # Draw the screen with the buttons.
-                screen.blit(background, (0, 0))
-
-                button_rect = pygame.Rect((0, buttons_start), buttons_size)
-                buttons = render_buttons(screen, questions, button_rect, font, wrong)
+                buttons, status = self.draw(questions, wrong)
 
                 # Play the progression
                 pygame.event.clear()
-                status.update()
+                status.update(self.elapsed_ticks())
                 question.play(midi_out)
 
                 # Wait for events until we get a button click; check the answer.
                 running, choice = get_answer(
-                    buttons, question, midi_out, status, self.clock_tick
+                    buttons,
+                    question,
+                    midi_out,
+                    status,
+                    self.clock_tick,
+                    self.elapsed_ticks(),
                 )
                 if running:
                     if choice.label in wrong:
@@ -217,5 +223,13 @@ class Quiz:
                         self.update(choice, question)
 
         finally:
-            print(f"Time: {status.time_label()}")
+            print(f"Time: {status.time_label(self.elapsed_ticks())}")
             pygame.midi.quit()
+
+
+def open_midi_out():
+    pygame.midi.init()
+    port = pygame.midi.get_default_output_id()
+    midi_out = pygame.midi.Output(port, 0)
+    midi_out.set_instrument(0)
+    return midi_out

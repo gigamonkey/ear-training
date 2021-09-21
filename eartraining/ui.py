@@ -76,7 +76,7 @@ class Status:
         self.screen = screen
         self.start_tick = pygame.time.get_ticks()
 
-    def update(self):
+    def update(self, elapsed_ticks):
         surface = pygame.Surface(self.rect.size)
         pygame.draw.rect(
             surface,
@@ -84,14 +84,14 @@ class Status:
             pygame.Rect(0, 0, self.rect.width, self.rect.height),
         )
 
-        self.draw_clock(surface)
+        self.draw_clock(surface, elapsed_ticks)
         self.draw_status(surface)
 
         self.screen.blit(surface, (self.rect.x, self.rect.y))
         pygame.display.update()
 
-    def draw_clock(self, surface):
-        text, text_rect = self.font.render(self.time_label(), (0, 0, 0))
+    def draw_clock(self, surface, elapsed_ticks):
+        text, text_rect = self.font.render(self.time_label(elapsed_ticks), (0, 0, 0))
         x = self.rect.width - (text_rect.width + 5)
         y = (self.rect.height - text_rect.height) / 2
         surface.blit(text, (x, y))
@@ -102,9 +102,8 @@ class Status:
         y = (self.rect.height - text_rect.height) / 2
         surface.blit(text, (x, y))
 
-    def time_label(self):
-        ticks = pygame.time.get_ticks()
-        minutes, seconds = divmod((ticks - self.start_tick) // 1000, 60)
+    def time_label(self, elapsed_ticks):
+        minutes, seconds = divmod(elapsed_ticks // 1000, 60)
         if minutes >= 60:
             hours, minutes = divmod(minutes, 60)
         else:
