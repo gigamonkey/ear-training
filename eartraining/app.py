@@ -7,6 +7,7 @@ Customize by providing an implementation of Quiz.
 """
 
 import random
+from dataclasses import dataclass
 
 import pygame
 import pygame.freetype
@@ -22,13 +23,6 @@ from eartraining.ui import is_quit
 from eartraining.ui import is_replay
 from eartraining.ui import is_replay_with_hint
 from eartraining.ui import render_buttons
-
-initial_button_color = (127, 127, 255)
-
-wrong_button_color = (64, 64, 255)
-
-status_color = (16 * 10, 16 * 10, 255)
-
 
 establish_key = (
     (melody(Scale.major + (12,) + tuple(reversed(Scale.major))))
@@ -52,7 +46,7 @@ class Question:
         "Some quizes want to play something after an incorrect answer."
 
 
-def get_answer(buttons, question, midi_out, status, clock_tick, elapsed_ticks):
+def get_answer(buttons, question, midi_out, status, clock):
     while True:
         event = pygame.event.wait()
         if is_quit(event):
@@ -63,27 +57,42 @@ def get_answer(buttons, question, midi_out, status, clock_tick, elapsed_ticks):
             question.hint(midi_out)
         elif is_establish_key(event):
             play(midi_out, establish_key)
-        elif event.type == clock_tick:
-            status.update(elapsed_ticks)
+        elif event.type == Quiz.CLOCK_TICK:
+            status.update(clock.elapsed())
         elif event.type == pygame.MOUSEBUTTONDOWN:
             for b in buttons:
                 if b.is_hit(event.pos):
                     return True, b.question
 
 
+@dataclass
+class Clock:
+
+    start_tick = None
+
+    def start(self):
+        self.start_tick = pygame.time.get_ticks()
+        pygame.time.set_timer(Quiz.CLOCK_TICK, 1000)
+
+    def elapsed(self):
+        return pygame.time.get_ticks() - self.start_tick
+
+
 class Quiz:
+
+    CLOCK_TICK = pygame.event.custom_type()
+    SOUND_DONE = pygame.event.custom_type()
+
     def __init__(self, name):
         self.name = name
-        self.clock_tick = pygame.event.custom_type()
-        self.sound_done = pygame.event.custom_type()
         self.size = (300, 500)
+        self.clock = Clock()
 
         pygame.init()
         pygame.display.set_caption(self.name)
         pygame.event.set_blocked(pygame.MOUSEMOTION)
 
         self.screen = pygame.display.set_mode(self.size)
-        self.start_tick = pygame.time.get_ticks()
 
     def make_universe(self):
         """
@@ -133,12 +142,9 @@ class Quiz:
         # Wait for sound to be done.
         while True:
             event = pygame.event.wait()
-            if event.type == self.sound_done:
+            if event.type == Quiz.SOUND_DONE:
                 pygame.time.wait(300)
                 break
-
-    def elapsed_ticks(self):
-        return pygame.time.get_ticks() - self.start_tick
 
     def draw(self, questions, wrong):
         background = pygame.Surface(self.size)
@@ -174,17 +180,15 @@ class Quiz:
         self.wrong_sound.set_volume(0.10)
 
         channel = pygame.mixer.Channel(0)
-        channel.set_endevent(self.sound_done)
+        channel.set_endevent(Quiz.SOUND_DONE)
 
         try:
-            midi_out = open_midi_out()
-
             running = True
 
+            midi_out = open_midi_out()
             wrong = set()
 
-            # For updating status
-            pygame.time.set_timer(self.clock_tick, 1000)
+            self.clock.start()
 
             while running:
 
@@ -196,7 +200,7 @@ class Quiz:
 
                 # Play the progression
                 pygame.event.clear()
-                status.update(self.elapsed_ticks())
+                status.update(self.clock.elapsed())
                 question.play(midi_out)
 
                 # Wait for events until we get a button click; check the answer.
@@ -205,8 +209,7 @@ class Quiz:
                     question,
                     midi_out,
                     status,
-                    self.clock_tick,
-                    self.elapsed_ticks(),
+                    self.clock,
                 )
                 if running:
                     if choice.label in wrong:
@@ -223,7 +226,7 @@ class Quiz:
                         self.update(choice, question)
 
         finally:
-            print(f"Time: {status.time_label(self.elapsed_ticks())}")
+            print(f"Time: {status.time_label(self.clock.elapsed())}")
             pygame.midi.quit()
 
 
