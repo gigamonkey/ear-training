@@ -111,6 +111,7 @@ class QuizUI:
 
     def __init__(self, name, quiz):
         pygame.init()
+        pygame.event.pump()
         pygame.display.set_caption(name)
         pygame.event.set_blocked(pygame.MOUSEMOTION)
 
@@ -150,7 +151,10 @@ class QuizUI:
 
     def get_answer(self, buttons, question):
         while True:
+            # print(f"[{pygame.time.get_ticks()}] Waiting for event")
             event = pygame.event.wait()
+            # print(f"[{pygame.time.get_ticks()}] {event}")
+
             if is_quit(event):
                 self.running = False
                 return None
