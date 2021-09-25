@@ -222,6 +222,7 @@ class QuizUI:
 
         elif event.type == QuizUI.WRONG_ANSWER:
             self.play_and_wait(self.wrong_sound)
+            event.question.play(self.midi_out)
 
         elif event.type == Buttons.BUTTON_PRESSED:
             # FIXME: this should probably live in the Button itself.
