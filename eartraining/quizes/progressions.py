@@ -31,12 +31,10 @@ class ProgressionQuiz(Quiz):
     def __init__(self, name, number):
         super().__init__(name)
         self.number = number
+        self.universe = list(permutations(range(2, 8), self.number - 2))
 
-    def make_universe(self):
-        return list(permutations(range(2, 8), self.number - 2))
-
-    def make_choices(self, universe):
-        seed = random.choice(universe)
+    def make_choices(self):
+        seed = random.choice(self.universe)
         sample = random.sample([m for m in universe if similar(seed, m)], 4)
 
         choices = [ProgressionQuestion((1, *m, 1)) for m in sample]

@@ -64,30 +64,13 @@ class Quiz:
     def __init__(self):
         self.current_question = Question()  # Dummy question
 
-    def make_universe(self):
-        """
-        Make the universe from which make_questions will create a set of
-        questions. This method is only called once and its result is
-        turned into a set of actual choices each time we present a new
-        question. For simple quizes the universe *is* the set of
-        choices and only needs to be generated once. If the universe
-        of possible questions is too big to present all at once then
-        the make_choices method can be used to draw an appropriately
-        sized set of questions out of the universe.
-        """
-        return None
-
-    def make_choices(self, universe):
+    def make_choices(self):
         """
         From the universe of possible questions, pick an appropriately
-        sized subset of choices to present in one question. If the set
-        of choices is always the same, then the default implementation
-        is fine. If the universe is too big, override this method to
-        reduce it in some way. That might be as simple as picking some
-        choices at random but may require picking related elements of
-        the total universe.
+        sized subset of choices to present in one question. This may
+        be the same all the time in which case it can be set up in the
+        constructor and returned here.
         """
-        return universe
 
     def make_questions(self, choices):
         """
@@ -105,12 +88,8 @@ class Quiz:
     def status_text(self):
         return ""
 
-    def start(self):
-        self.universe = self.make_universe()
-        self.next_question()
-
     def next_question(self):
-        choices = self.make_choices(self.universe)
+        choices = self.make_choices()
         question, questions = self.make_questions(choices)
         self.current_question = question
         pygame.event.post(
@@ -156,23 +135,24 @@ class QuizUI:
         self.running = False
 
         self.size = (300, 500)
+        self.screen = pygame.display.set_mode(self.size)
 
         self.clock = Clock()
-        self.screen = pygame.display.set_mode(self.size)
+
         status_font = pygame.freetype.SysFont("helveticaneue", 14)
-        self.status_height = 20
-        self.status_padding = 5
+        status_height = 20
+        status_padding = 5
         self.status = Status(
             self.quiz,
             (0, 0),
-            (self.size[0], self.status_height),
+            (self.size[0], status_height),
             status_font,
             self.screen,
             self.clock,
         )
 
         button_font = pygame.freetype.SysFont("helveticaneue", 32)
-        buttons_start = self.status_height + self.status_padding
+        buttons_start = status_height + status_padding
         buttons_size = (self.size[0], self.size[1] - buttons_start)
         buttons_rect = pygame.Rect((0, buttons_start), buttons_size)
         self.buttons = Buttons(self.screen, button_font, buttons_rect, 5)
@@ -183,19 +163,17 @@ class QuizUI:
         self.register_listener(QuizUI.CORRECT_ANSWER, self)
         self.register_listener(QuizUI.WRONG_ANSWER, self)
         self.register_listener(Buttons.BUTTON_PRESSED, self)
-
         self.register_listener(QuizUI.CLOCK_TICK, self.status)
-
         self.register_listener(pygame.MOUSEBUTTONDOWN, self.buttons)
         self.register_listener(pygame.MOUSEBUTTONUP, self.buttons)
 
-    def draw(self):
-        background = pygame.Surface(self.size)
-        background.fill(pygame.Color("#dddddd"))
-        self.screen.blit(background, (0, 0))
-        self.status.draw()
-        self.buttons.draw()
-        pygame.display.update()
+    def register_listener(self, type, listener):
+        self.listeners[type].append(listener)
+
+    def dispatch_events(self):
+        for event in pygame.event.get():
+            for listener in self.listeners[event.type]:
+                listener.handle_event(event)
 
     def handle_event(self, event):
         "The events we handle directly."
@@ -234,22 +212,22 @@ class QuizUI:
                 if not self.quiz.check_answer(event.button.question):
                     event.button.state = ButtonState.WRONG
 
-    def register_listener(self, type, listener):
-        self.listeners[type].append(listener)
-
-    def dispatch_events(self):
-        for event in pygame.event.get():
-            for listener in self.listeners[event.type]:
-                listener.handle_event(event)
+    def draw(self):
+        background = pygame.Surface(self.size)
+        background.fill(pygame.Color("#dddddd"))
+        self.screen.blit(background, (0, 0))
+        self.status.draw()
+        self.buttons.draw()
+        pygame.display.update()
 
     def run(self):
         try:
             self.setup_sound_effects()
             self.open_midi_out()
             self.clock.start()
-            self.quiz.start()
-            self.running = True
+            self.quiz.next_question()
 
+            self.running = True
             while self.running:
                 self.dispatch_events()
 

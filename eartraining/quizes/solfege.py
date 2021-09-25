@@ -5,6 +5,7 @@
 
 from eartraining.app import Question
 from eartraining.app import Quiz
+from eartraining.app import QuizUI
 from eartraining.midi import play
 from eartraining.music import Scale
 from eartraining.music import melody
@@ -29,10 +30,13 @@ class SolfegeQuestion(Question):
 
 
 class SolfegeQuiz(Quiz):
-    def make_universe(self):
-        return [SolfegeQuestion(name, i + 1) for i, name in enumerate(solfege)]
+    def __init__(self):
+        self.choices = [SolfegeQuestion(name, i + 1) for i, name in enumerate(solfege)]
+
+    def make_choices(self):
+        return self.choices
 
 
 if __name__ == "__main__":
 
-    SolfegeQuiz("Solfege").run()
+    QuizUI("Solfege", SolfegeQuiz()).run()

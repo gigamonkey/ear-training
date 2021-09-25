@@ -24,8 +24,7 @@ class ProgressiveQuiz(Quiz):
         )
         return f"At least {to_go} to get to next."
 
-    def make_choices(self, universe):
-        "Ignore the universe."
+    def make_choices(self):
         args = next(self.arg_generator)
         self.first_answer = True
         ts = enumerate(self.templates[: self.active])
