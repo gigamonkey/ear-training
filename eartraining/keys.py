@@ -162,7 +162,6 @@ class UI:
                 self.quiz.play()
 
     def run(self):
-
         try:
             self.open_midi_out()
 

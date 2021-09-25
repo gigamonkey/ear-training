@@ -7,6 +7,7 @@ Customize by providing an implementation of Quiz.
 """
 
 import random
+from collections import defaultdict
 from dataclasses import dataclass
 
 import pygame
@@ -17,12 +18,13 @@ import pygame.time
 from eartraining.midi import play
 from eartraining.music import Scale
 from eartraining.music import melody
+from eartraining.ui import Buttons
+from eartraining.ui import ButtonState
 from eartraining.ui import Status
 from eartraining.ui import is_establish_key
 from eartraining.ui import is_quit
 from eartraining.ui import is_replay
 from eartraining.ui import is_replay_with_hint
-from eartraining.ui import render_buttons
 
 establish_key = (
     (melody(Scale.major + (12,) + tuple(reversed(Scale.major))))
@@ -42,9 +44,6 @@ class Question:
     def after_correct(self, midi_out):
         "Some quizes want to play something after a correct answer."
 
-    def after_incorrect(self, midi_out, choice, question):
-        "Some quizes want to play something after an incorrect answer."
-
 
 @dataclass
 class Clock:
@@ -62,6 +61,9 @@ class Clock:
 
 
 class Quiz:
+    def __init__(self):
+        self.current_question = Question()  # Dummy question
+
     def make_universe(self):
         """
         Make the universe from which make_questions will create a set of
@@ -103,109 +105,152 @@ class Quiz:
     def status_text(self):
         return ""
 
+    def start(self):
+        self.universe = self.make_universe()
+        self.next_question()
+
+    def next_question(self):
+        choices = self.make_choices(self.universe)
+        question, questions = self.make_questions(choices)
+        self.current_question = question
+        pygame.event.post(
+            pygame.event.Event(
+                QuizUI.NEW_QUESTION, question=question, questions=questions
+            )
+        )
+
+    def check_answer(self, choice):
+        self.update(choice, self.current_question)
+
+        if choice is self.current_question:
+            pygame.event.post(
+                pygame.event.Event(QuizUI.CORRECT_ANSWER, question=choice)
+            )
+            self.next_question()
+            return True
+        else:
+            pygame.event.post(
+                pygame.event.Event(
+                    QuizUI.WRONG_ANSWER, question=self.current_question, choice=choice
+                )
+            )
+            return False
+
 
 class QuizUI:
 
     CLOCK_TICK = pygame.event.custom_type()
     SOUND_DONE = pygame.event.custom_type()
+    NEW_QUESTION = pygame.event.custom_type()
+    CORRECT_ANSWER = pygame.event.custom_type()
+    WRONG_ANSWER = pygame.event.custom_type()
 
     def __init__(self, name, quiz):
         pygame.init()
-        pygame.event.pump()
         pygame.display.set_caption(name)
         pygame.event.set_blocked(pygame.MOUSEMOTION)
+        pygame.event.pump()
+
+        self.quiz = quiz
+        self.listeners = defaultdict(list)
+        self.running = False
 
         self.size = (300, 500)
 
         self.clock = Clock()
-        self.running = False
         self.screen = pygame.display.set_mode(self.size)
         status_font = pygame.freetype.SysFont("helveticaneue", 14)
         self.status_height = 20
         self.status_padding = 5
         self.status = Status(
-            self, (0, 0), (self.size[0], self.status_height), status_font, self.screen
+            self.quiz,
+            (0, 0),
+            (self.size[0], self.status_height),
+            status_font,
+            self.screen,
+            self.clock,
         )
-        self.quiz = quiz
 
-    def draw(self, questions, wrong):
+        button_font = pygame.freetype.SysFont("helveticaneue", 32)
+        buttons_start = self.status_height + self.status_padding
+        buttons_size = (self.size[0], self.size[1] - buttons_start)
+        buttons_rect = pygame.Rect((0, buttons_start), buttons_size)
+        self.buttons = Buttons(self.screen, button_font, buttons_rect, 5)
+
+        self.register_listener(pygame.QUIT, self)
+        self.register_listener(pygame.KEYDOWN, self)
+        self.register_listener(QuizUI.NEW_QUESTION, self)
+        self.register_listener(QuizUI.CORRECT_ANSWER, self)
+        self.register_listener(QuizUI.WRONG_ANSWER, self)
+        self.register_listener(Buttons.BUTTON_PRESSED, self)
+
+        self.register_listener(QuizUI.CLOCK_TICK, self.status)
+
+        self.register_listener(pygame.MOUSEBUTTONDOWN, self.buttons)
+        self.register_listener(pygame.MOUSEBUTTONUP, self.buttons)
+
+    def draw(self):
         background = pygame.Surface(self.size)
         background.fill(pygame.Color("#dddddd"))
         self.screen.blit(background, (0, 0))
-
-        # FIXME: should make a ButtonSet widget that can be sized once
-        # and then renders the appropriate set of buttons, basically
-        # as we do here.
-
-        font = pygame.freetype.SysFont("helveticaneue", 32)
-        buttons_start = self.status_height + self.status_padding
-        buttons_size = (self.size[0], self.size[1] - buttons_start)
-
-        button_rect = pygame.Rect((0, buttons_start), buttons_size)
-        buttons = render_buttons(self.screen, questions, button_rect, font, wrong)
-
-        self.status.update(self.clock.elapsed(), self.quiz.status_text())
+        self.status.draw()
+        self.buttons.draw()
         pygame.display.update()
 
-        return buttons
+    def handle_event(self, event):
+        "The events we handle directly."
+        if is_quit(event):
+            self.running = False
 
-    def get_answer(self, buttons, question):
-        while True:
-            # print(f"[{pygame.time.get_ticks()}] Waiting for event")
-            event = pygame.event.wait()
-            # print(f"[{pygame.time.get_ticks()}] {event}")
+        elif is_replay(event):
+            self.quiz.current_question.play(self.midi_out)
 
-            if is_quit(event):
-                self.running = False
-                return None
-            elif is_replay(event):
-                question.play(self.midi_out)
-            elif is_replay_with_hint(event):
-                question.hint(self.midi_out)
-            elif is_establish_key(event):
-                play(self.midi_out, establish_key)
-            elif event.type == QuizUI.CLOCK_TICK:
-                self.status.update(self.clock.elapsed(), self.quiz.status_text())
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                for b in buttons:
-                    if b.is_hit(event.pos):
-                        return b.question
+        elif is_replay_with_hint(event):
+            self.quiz.current_question.hint(self.midi_out)
+
+        elif is_establish_key(event):
+            play(self.midi_out, establish_key)
+
+        elif event.type == QuizUI.NEW_QUESTION:
+            self.buttons.set_questions(event.questions, event.questions)
+            self.draw()
+            event.question.play(self.midi_out)
+
+        elif event.type == QuizUI.CORRECT_ANSWER:
+            self.play_and_wait(self.correct_sound)
+            event.question.after_correct(self.midi_out)
+
+        elif event.type == QuizUI.WRONG_ANSWER:
+            self.play_and_wait(self.wrong_sound)
+
+        elif event.type == Buttons.BUTTON_PRESSED:
+            # FIXME: this should probably live in the Button itself.
+            if event.button.state is ButtonState.WRONG:
+                # We get here when the button has already been marked
+                # wrong previously.
+                event.button.question.play(self.midi_out)
+            else:
+                if not self.quiz.check_answer(event.button.question):
+                    event.button.state = ButtonState.WRONG
+
+    def register_listener(self, type, listener):
+        self.listeners[type].append(listener)
+
+    def dispatch_events(self):
+        for event in pygame.event.get():
+            for listener in self.listeners[event.type]:
+                listener.handle_event(event)
 
     def run(self):
         try:
             self.setup_sound_effects()
             self.open_midi_out()
             self.clock.start()
-
-            universe = self.quiz.make_universe()
-            wrong = set()
-
+            self.quiz.start()
             self.running = True
+
             while self.running:
-
-                if not wrong:
-                    choices = self.quiz.make_choices(universe)
-                    question, questions = self.quiz.make_questions(choices)
-
-                pygame.event.clear()
-                buttons = self.draw(questions, wrong)
-                question.play(self.midi_out)
-
-                # Wait for events until we get a button click; check the answer.
-                choice = self.get_answer(buttons, question)
-                if self.running:
-                    if choice.label in wrong:
-                        choice.play(self.midi_out)
-                    else:
-                        if choice == question:
-                            self.play_and_wait(self.correct_sound)
-                            question.after_correct(self.midi_out)
-                            wrong = set()
-                        else:
-                            self.play_and_wait(self.wrong_sound)
-                            question.after_incorrect(self.midi_out, choice, question)
-                            wrong.add(choice.label)
-                        self.quiz.update(choice, question)
+                self.dispatch_events()
 
         finally:
             print(f"Time: {self.status.time_label(self.clock.elapsed())}")

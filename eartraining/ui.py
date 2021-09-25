@@ -4,6 +4,9 @@
 UI elements.
 """
 
+from enum import Enum
+from enum import auto
+
 import pygame
 import pygame.freetype
 import pygame.midi
@@ -13,11 +16,17 @@ from eartraining import keyboard
 
 initial_button_color = (127, 127, 255)
 
+disabled_button_color = (127, 127, 127)
+
 wrong_button_color = (64, 64, 255)
 
 status_color = (16 * 10, 16 * 10, 255)
 
 quit_keys = {pygame.K_ESCAPE, pygame.K_q}
+
+
+def is_mouse_click_event(e):
+    return e.type in {pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP}
 
 
 def is_mouse_event(e):
@@ -44,40 +53,113 @@ def is_establish_key(e):
     return e.type == pygame.KEYDOWN and e.key == pygame.K_k
 
 
-class Button:
-    def __init__(self, question, pos, size, is_wrong):
-        self.question = question
-        self.rect = pygame.Rect(pos, size)
-        self.is_wrong = is_wrong
+class ButtonState(Enum):
+    DISABLED = auto()
+    ACTIVE = auto()
+    WRONG = auto()
 
-    def render(self, screen, font):
+
+class Button:
+    def __init__(self, surface, font, pos, size, question, state):
+        self.surface = surface
+        self.font = font
+        self.rect = pygame.Rect(pos, size)
+        self.question = question
+        self.state = state
+
+    def color(self):
+        if self.state == ButtonState.DISABLED:
+            return disabled_button_color
+        elif self.state == ButtonState.ACTIVE:
+            return initial_button_color
+        elif self.state == ButtonState.WRONG:
+            return wrong_button_color
+
+    def draw(self):
         surface = pygame.Surface(self.rect.size)
         pygame.draw.rect(
             surface,
-            initial_button_color if not self.is_wrong else wrong_button_color,
+            self.color(),
             pygame.Rect(0, 0, self.rect.width, self.rect.height),
         )
-        text, text_rect = font.render(self.question.label, (0, 0, 0))
+        text, text_rect = self.font.render(self.question.label, (0, 0, 0))
 
         x = (self.rect.width - text_rect.width) / 2
         y = (self.rect.height - text_rect.height) / 2
 
         surface.blit(text, (x, y))
-        screen.blit(surface, (self.rect.x, self.rect.y))
+        self.surface.blit(surface, (self.rect.x, self.rect.y))
 
     def is_hit(self, pos):
         return self.rect.collidepoint(pos)
 
+    def handle_event(self, event):
+        if self.state is not ButtonState.DISABLED:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if self.is_hit(event.pos):
+                    # Probably highlight the button
+                    pass
+
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if self.is_hit(event.pos):
+                    # Unhighlight the button and fire a button_press event.
+                    pygame.event.post(
+                        pygame.event.Event(Buttons.BUTTON_PRESSED, button=self)
+                    )
+
+
+class Buttons:
+
+    BUTTON_PRESSED = pygame.event.custom_type()
+
+    def __init__(self, surface, font, rect, gap):
+        self.surface = surface
+        self.font = font
+        self.rect = rect
+        self.gap = gap
+        self.buttons = []
+
+    def set_questions(self, possible, active):
+        self.possible = possible
+        self.active = active
+
+        h = ((self.rect.height + self.gap) / len(self.possible)) - self.gap
+
+        def make_button(q, i):
+            return Button(
+                self.surface,
+                self.font,
+                (0, self.rect.top + (i * (h + self.gap))),
+                (self.rect.width, h),
+                q,
+                ButtonState.ACTIVE if q in active else ButtonState.DISABLED,
+            )
+
+        self.buttons = [make_button(q, i) for i, q in enumerate(possible)]
+
+    def draw(self):
+        if self.buttons:
+            ((self.rect.height + self.gap) / len(self.buttons)) - self.gap
+            for b in self.buttons:
+                b.draw()
+
+    def handle_event(self, event):
+        "Dispatch mouseclick events to the appropriate button."
+        if is_mouse_click_event(event):
+            for b in self.buttons:
+                if b.is_hit(event.pos):
+                    b.handle_event(event)
+
 
 class Status:
-    def __init__(self, quiz, pos, size, font, screen):
+    def __init__(self, quiz, pos, size, font, surface, clock):
         self.quiz = quiz
         self.rect = pygame.Rect(pos, size)
         self.font = font
-        self.screen = screen
-        self.start_tick = pygame.time.get_ticks()
+        self.surface = surface
+        self.clock = clock
 
-    def update(self, elapsed_ticks, text):
+    def draw(self):
         surface = pygame.Surface(self.rect.size)
         pygame.draw.rect(
             surface,
@@ -85,11 +167,15 @@ class Status:
             pygame.Rect(0, 0, self.rect.width, self.rect.height),
         )
 
-        self.draw_clock(surface, elapsed_ticks)
-        self.draw_status(surface, text)
+        self.draw_clock(surface, self.clock.elapsed())
+        self.draw_status(surface, self.quiz.status_text())
 
-        self.screen.blit(surface, (self.rect.x, self.rect.y))
-        pygame.display.update()
+        self.surface.blit(surface, (self.rect.x, self.rect.y))
+        pygame.display.update(self.rect)
+
+    def handle_event(self, event):
+        # Gets TICK events.
+        self.draw()
 
     def draw_clock(self, surface, elapsed_ticks):
         text, text_rect = self.font.render(self.time_label(elapsed_ticks), (0, 0, 0))
@@ -110,20 +196,6 @@ class Status:
         else:
             hours = 0
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-
-def render_buttons(surface, quiz, rect, font, wrong, gap=5):
-
-    h = ((rect.height + gap) / len(quiz)) - gap
-
-    def make_button(q, i):
-        b = Button(
-            q, (0, rect.top + (i * (h + gap))), (rect.width, h), q.label in wrong
-        )
-        b.render(surface, font)
-        return b
-
-    return [make_button(q, i) for i, q in enumerate(quiz)]
 
 
 class ChromaticKeyboard:
