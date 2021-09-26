@@ -211,6 +211,7 @@ class QuizUI:
             else:
                 if not self.quiz.check_answer(event.button.question):
                     event.button.state = ButtonState.WRONG
+                    event.button.draw()
 
     def draw(self):
         background = pygame.Surface(self.size)
