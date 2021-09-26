@@ -89,6 +89,7 @@ class Button:
 
         surface.blit(text, (x, y))
         self.surface.blit(surface, (self.rect.x, self.rect.y))
+        pygame.display.update(self.rect)
 
     def is_hit(self, pos):
         return self.rect.collidepoint(pos)
