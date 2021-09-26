@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import random
-
 from collections import defaultdict
 
 from eartraining.app import Quiz
@@ -79,7 +78,11 @@ class PlusMinusProgressiveQuiz(Quiz):
     def make_choices(self):
         args = next(self.arg_generator)
         self.first_answer = True
-        return [t.instantiate(i, *args) for i, t in enumerate(self.templates) if i in self.active]
+        return [
+            t.instantiate(i, *args)
+            for i, t in enumerate(self.templates)
+            if i in self.active
+        ]
 
     def make_questions(self, choices):
         # FIXME: align may only apply to chords.

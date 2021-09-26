@@ -11,7 +11,7 @@ from eartraining.midi import play
 from eartraining.music import chord
 from eartraining.music import chord_types
 from eartraining.music import melody
-from eartraining.progressive import ProgressiveQuiz, PlusMinusProgressiveQuiz
+from eartraining.progressive import PlusMinusProgressiveQuiz
 
 
 @dataclass
