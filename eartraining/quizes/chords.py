@@ -11,7 +11,7 @@ from eartraining.midi import play
 from eartraining.music import chord
 from eartraining.music import chord_types
 from eartraining.music import melody
-from eartraining.progressive import ProgressiveQuiz
+from eartraining.progressive import ProgressiveQuiz, PlusMinusProgressiveQuiz
 
 
 @dataclass
@@ -84,4 +84,4 @@ if __name__ == "__main__":
 
     templates = [ChordTemplate(c) for c in chord_types.keys()]
 
-    QuizUI("Chords", ProgressiveQuiz(templates, root_generator(), 3)).run()
+    QuizUI("Chords", PlusMinusProgressiveQuiz(templates, root_generator(), 3)).run()
