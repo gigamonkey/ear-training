@@ -196,10 +196,12 @@ class QuizUI:
 
         elif event.type == QuizUI.CORRECT_ANSWER:
             self.play_and_wait(self.correct_sound)
+            self.draw()
             event.question.after_correct(self.midi_out)
 
         elif event.type == QuizUI.WRONG_ANSWER:
             self.play_and_wait(self.wrong_sound)
+            self.draw()
             event.question.play(self.midi_out)
 
         elif event.type == Buttons.BUTTON_PRESSED:

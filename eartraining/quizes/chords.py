@@ -11,7 +11,7 @@ from eartraining.midi import play
 from eartraining.music import chord
 from eartraining.music import chord_types
 from eartraining.music import melody
-from eartraining.progressive import PlusMinusProgressiveQuiz
+from eartraining.progressive import PlusMinusProgressiveQuiz, FixedQuiz
 
 
 @dataclass
@@ -82,6 +82,12 @@ def root_generator():
 
 if __name__ == "__main__":
 
-    templates = [ChordTemplate(c) for c in chord_types.keys()]
+    major7minor7 = {(0, 4, 7, 11), (0, 3, 7, 10)}
 
-    QuizUI("Chords", PlusMinusProgressiveQuiz(templates, root_generator(), 3)).run()
+    to_ask = [c for c in chord_types if len(c) == 3]
+
+    #templates = [ChordTemplate(c) for c in chord_types.keys()]
+    templates = [ChordTemplate(c) for c in to_ask]
+
+    #QuizUI("Chords", PlusMinusProgressiveQuiz(templates, root_generator(), 3)).run()
+    QuizUI("Chords", FixedQuiz(templates, root_generator())).run()
