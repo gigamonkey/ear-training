@@ -166,6 +166,7 @@ class QuizUI:
         self.register_listener(QuizUI.CLOCK_TICK, self.status)
         self.register_listener(pygame.MOUSEBUTTONDOWN, self.buttons)
         self.register_listener(pygame.MOUSEBUTTONUP, self.buttons)
+        self.register_listener(pygame.KEYDOWN, self.buttons)
 
     def register_listener(self, type, listener):
         self.listeners[type].append(listener)

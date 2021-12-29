@@ -24,6 +24,18 @@ status_color = (16 * 10, 16 * 10, 255)
 
 quit_keys = {pygame.K_ESCAPE, pygame.K_q}
 
+all_number_keys = {
+    pygame.K_1: 1,
+    pygame.K_2: 2,
+    pygame.K_3: 3,
+    pygame.K_4: 4,
+    pygame.K_5: 5,
+    pygame.K_6: 6,
+    pygame.K_7: 7,
+    pygame.K_8: 8,
+    pygame.K_9: 9,
+    pygame.K_0: 0,
+}
 
 def is_mouse_click_event(e):
     return e.type in {pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP}
@@ -51,6 +63,14 @@ def is_replay_with_hint(e):
 
 def is_establish_key(e):
     return e.type == pygame.KEYDOWN and e.key == pygame.K_k
+
+
+def is_number_key(e):
+    return e.type == pygame.KEYDOWN and e.key in all_number_keys
+
+
+def number_key_value(e):
+    return all_number_keys[e.key]
 
 
 class ButtonState(Enum):
@@ -107,6 +127,10 @@ class Button:
                     pygame.event.post(
                         pygame.event.Event(Buttons.BUTTON_PRESSED, button=self)
                     )
+            elif is_number_key(event):
+                pygame.event.post(
+                    pygame.event.Event(Buttons.BUTTON_PRESSED, button=self)
+                )
 
 
 class Buttons:
@@ -150,6 +174,13 @@ class Buttons:
             for b in self.buttons:
                 if b.is_hit(event.pos):
                     b.handle_event(event)
+
+        elif is_number_key(event):
+            index = (number_key_value(event) - 1) % 10
+            if index < len(self.buttons):
+                self.buttons[index].handle_event(event)
+
+
 
 
 class Status:
