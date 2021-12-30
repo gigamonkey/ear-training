@@ -8,7 +8,9 @@ from eartraining.app import QuizUI
 from eartraining.midi import play
 from eartraining.music import intervals
 from eartraining.music import melody
-from eartraining.progressive import ProgressiveQuiz
+from eartraining.progressive import ProgressiveQuiz, FixedQuiz
+
+speed = 300
 
 
 @dataclass
@@ -34,11 +36,11 @@ class IntervalQuestion(Question):
 
     def play(self, midi_out):
         second_note = self.distance if self.ascending else -self.distance
-        play(midi_out, melody((0, second_note)).render(self.root, 120))
+        play(midi_out, melody((0, second_note)).render(self.root, speed))
 
     def hint(self, midi_out):
         second_note = -self.distance if self.ascending else self.distance
-        play(midi_out, melody((0, second_note)).render(self.root, 120))
+        play(midi_out, melody((0, second_note)).render(self.root, speed))
 
     def align(self, other):
         return other
@@ -54,6 +56,7 @@ if __name__ == "__main__":
     # distances = range(1, 13)
     distances = [12, 7, 5, 4, 8, 3, 9, 6, 10, 2, 11, 1]
 
-    templates = [IntervalTemplate(d) for d in distances]
+    templates = [IntervalTemplate(d) for d in sorted(distances)]
 
-    QuizUI("Intervals", ProgressiveQuiz(templates, arg_generator(), 3)).run()
+    #QuizUI("Intervals", ProgressiveQuiz(templates, arg_generator(), 3)).run()
+    QuizUI("Intervals", FixedQuiz(templates, arg_generator())).run()

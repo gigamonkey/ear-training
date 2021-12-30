@@ -82,9 +82,11 @@ def root_generator():
 
 if __name__ == "__main__":
 
-    major7minor7 = {(0, 4, 7, 11), (0, 3, 7, 10)}
+    major7minor7 = [(0, 4, 7, 11), (0, 3, 7, 10)]
+    triads = [c for c in chord_types if len(c) == 3]
+    sevenths = [c for c in chord_types if len(c) == 4]
 
-    to_ask = [c for c in chord_types if len(c) == 3]
+    to_ask = sorted(sevenths, reverse=True)
 
     # templates = [ChordTemplate(c) for c in chord_types.keys()]
     templates = [ChordTemplate(c) for c in to_ask]
