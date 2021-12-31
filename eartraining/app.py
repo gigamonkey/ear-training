@@ -18,6 +18,7 @@ import pygame.time
 from eartraining.midi import play
 from eartraining.music import Scale
 from eartraining.music import melody
+from eartraining.ui import Button
 from eartraining.ui import Buttons
 from eartraining.ui import ButtonState
 from eartraining.ui import Status
