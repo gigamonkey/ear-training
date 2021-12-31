@@ -37,6 +37,7 @@ all_number_keys = {
     pygame.K_0: 0,
 }
 
+
 def is_mouse_click_event(e):
     return e.type in {pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP}
 
@@ -80,6 +81,9 @@ class ButtonState(Enum):
 
 
 class Button:
+
+    BUTTON_PRESSED = pygame.event.custom_type()
+
     def __init__(self, surface, font, pos, size, question, state):
         self.surface = surface
         self.font = font
@@ -125,18 +129,15 @@ class Button:
                 if self.is_hit(event.pos):
                     # Unhighlight the button and fire a button_press event.
                     pygame.event.post(
-                        pygame.event.Event(Buttons.BUTTON_PRESSED, button=self)
+                        pygame.event.Event(Button.BUTTON_PRESSED, button=self)
                     )
             elif is_number_key(event):
                 pygame.event.post(
-                    pygame.event.Event(Buttons.BUTTON_PRESSED, button=self)
+                    pygame.event.Event(Button.BUTTON_PRESSED, button=self)
                 )
 
 
 class Buttons:
-
-    BUTTON_PRESSED = pygame.event.custom_type()
-
     def __init__(self, surface, font, rect, gap):
         self.surface = surface
         self.font = font
@@ -164,7 +165,6 @@ class Buttons:
 
     def draw(self):
         if self.buttons:
-            ((self.rect.height + self.gap) / len(self.buttons)) - self.gap
             for b in self.buttons:
                 b.draw()
 
@@ -181,6 +181,48 @@ class Buttons:
                 self.buttons[index].handle_event(event)
 
 
+class Grid:
+    def __init__(self, surface, font, rect, gap):
+        self.surface = surface
+        self.font = font
+        self.rect = rect
+        self.gap = gap
+        self.buttons = []
+
+    def set_questions(self, grid):
+
+        rows = len(grid.rows)
+        cols = len(grid.rows[0].questions)
+
+        h = ((self.rect.height + self.gap) / rows) - self.gap
+        w = ((self.rect.width + self.gap) / cols) - self.gap
+
+        def make_button(q, x, y):
+
+            pos_x = self.rect.left + (x * (w + self.gap))
+            pos_y = self.rect.top + (y * (h + self.gap))
+
+            return Button(
+                self.surface, self.font, (pos_x, pos_y), (w, h), q, ButtonState.ACTIVE
+            )
+
+        self.buttons = [
+            make_button(q, x, y)
+            for y, row in enumerate(grid.rows)
+            for x, q in enumerate(row.questions)
+        ]
+
+    def draw(self):
+        if self.buttons:
+            for b in self.buttons:
+                b.draw()
+
+    def handle_event(self, event):
+        "Dispatch mouseclick events to the appropriate button."
+        if is_mouse_click_event(event):
+            for b in self.buttons:
+                if b.is_hit(event.pos):
+                    b.handle_event(event)
 
 
 class Status:

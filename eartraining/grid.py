@@ -9,6 +9,7 @@ Customize by providing an implementation of Quiz.
 import random
 from collections import defaultdict
 from dataclasses import dataclass
+from typing import List
 
 import pygame
 import pygame.freetype
@@ -18,8 +19,9 @@ import pygame.time
 from eartraining.midi import play
 from eartraining.music import Scale
 from eartraining.music import melody
-from eartraining.ui import Buttons
+from eartraining.ui import Button
 from eartraining.ui import ButtonState
+from eartraining.ui import Grid
 from eartraining.ui import Status
 from eartraining.ui import is_establish_key
 from eartraining.ui import is_quit
@@ -46,6 +48,21 @@ class Question:
 
 
 @dataclass
+class Row:
+    questions: List[Question]
+    active: bool = True
+
+
+@dataclass
+class QuestionGrid:
+    rows: List[Row]
+
+    def get_question(self):
+        row = random.choice([r for r in self.rows if r.active])
+        return random.choice(row.questions)
+
+
+@dataclass
 class Clock:
 
     "Keep track of elasped time."
@@ -63,24 +80,15 @@ class Clock:
 class Quiz:
     def __init__(self):
         self.current_question = Question()  # Dummy question
+        self.grid = self.make_grid()
 
-    def make_choices(self):
+    def make_grid(self):
         """
-        From the universe of possible questions, pick an appropriately
-        sized subset of choices to present in one question. This may
-        be the same all the time in which case it can be set up in the
-        constructor and returned here.
+        Make a grid of questions.
         """
 
-    def make_questions(self, choices):
-        """
-        From the choices returned by choices() return the actual question
-        and the choices. The default implementation is fine for many
-        quizes where any of the choices could be the actual question.
-        Other quizes may create choices that play something in
-        relation to the correct answer.
-        """
-        return random.choice(choices), choices
+    def dimensions(self):
+        return len(self.grid.rows), len(self.grid.rows[0].questions)
 
     def update(self, choice, question):
         "Update any count of how we're doing."
@@ -89,16 +97,13 @@ class Quiz:
         return ""
 
     def next_question(self):
-        choices = self.make_choices()
-        question, questions = self.make_questions(choices)
+        question = self.grid.get_question()
         self.current_question = question
-        pygame.event.post(
-            pygame.event.Event(
-                QuizUI.NEW_QUESTION, question=question, questions=questions
-            )
-        )
+
+        pygame.event.post(pygame.event.Event(QuizUI.NEW_QUESTION, question=question))
 
     def check_answer(self, choice):
+        print(f"Checking answer for {choice} with current: {self.current_question}")
         self.update(choice, self.current_question)
 
         if choice is self.current_question:
@@ -134,14 +139,22 @@ class QuizUI:
         self.listeners = defaultdict(list)
         self.running = False
 
-        self.size = (300, 500)
-        self.screen = pygame.display.set_mode(self.size)
+        r, c = quiz.dimensions()
+
+        print(f"Dimensions {r, c}")
 
         self.clock = Clock()
 
         status_font = pygame.freetype.SysFont("helveticaneue", 14)
         status_height = 20
         status_padding = 5
+        button_size = 100
+        self.size = (
+            (c * button_size) + status_height + status_padding,
+            r * button_size,
+        )
+        print(f"Size {self.size}")
+        self.screen = pygame.display.set_mode(self.size)
         self.status = Status(
             self.quiz,
             (0, 0),
@@ -155,7 +168,8 @@ class QuizUI:
         buttons_start = status_height + status_padding
         buttons_size = (self.size[0], self.size[1] - buttons_start)
         buttons_rect = pygame.Rect((0, buttons_start), buttons_size)
-        self.buttons = Buttons(self.screen, button_font, buttons_rect, 5)
+        self.grid = Grid(self.screen, button_font, buttons_rect, 5)
+        self.grid.set_questions(self.quiz.grid)
 
         self.register_listener(pygame.QUIT, self)
         self.register_listener(pygame.KEYDOWN, self)
@@ -164,9 +178,9 @@ class QuizUI:
         self.register_listener(QuizUI.WRONG_ANSWER, self)
         self.register_listener(Button.BUTTON_PRESSED, self)
         self.register_listener(QuizUI.CLOCK_TICK, self.status)
-        self.register_listener(pygame.MOUSEBUTTONDOWN, self.buttons)
-        self.register_listener(pygame.MOUSEBUTTONUP, self.buttons)
-        self.register_listener(pygame.KEYDOWN, self.buttons)
+        self.register_listener(pygame.MOUSEBUTTONDOWN, self.grid)
+        self.register_listener(pygame.MOUSEBUTTONUP, self.grid)
+        self.register_listener(pygame.KEYDOWN, self.grid)
 
     def register_listener(self, type, listener):
         self.listeners[type].append(listener)
@@ -191,7 +205,6 @@ class QuizUI:
             play(self.midi_out, establish_key)
 
         elif event.type == QuizUI.NEW_QUESTION:
-            self.buttons.set_questions(event.questions, event.questions)
             self.draw()
             event.question.play(self.midi_out)
 
@@ -206,12 +219,14 @@ class QuizUI:
             event.question.play(self.midi_out)
 
         elif event.type == Button.BUTTON_PRESSED:
+            print(f"Got button presssed")
             # FIXME: this should probably live in the Button itself.
             if event.button.state is ButtonState.WRONG:
                 # We get here when the button has already been marked
                 # wrong previously.
                 event.button.question.play(self.midi_out)
             else:
+                print(f"About to check answer")
                 if not self.quiz.check_answer(event.button.question):
                     event.button.state = ButtonState.WRONG
                     event.button.draw()
@@ -221,7 +236,7 @@ class QuizUI:
         background.fill(pygame.Color("#dddddd"))
         self.screen.blit(background, (0, 0))
         self.status.draw()
-        self.buttons.draw()
+        self.grid.draw()
         pygame.display.update()
 
     def run(self):
