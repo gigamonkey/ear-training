@@ -1,6 +1,6 @@
 PYTEST_OPTIONS := --tb=line -rN
 
-black := black
+black := black --target-version py310
 autoflake := autoflake --in-place --recursive --remove-unused-variables --expand-star-imports --remove-all-unused-imports
 
 all: fmt typecheck check
