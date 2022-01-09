@@ -12,7 +12,7 @@ from eartraining.music import Scale
 from eartraining.music import Sequence
 from eartraining.music import chord
 from eartraining.music import melody
-from eartraining.music import silence
+from eartraining.music import rest
 from eartraining.ui import ChromaticKeyboard
 from eartraining.ui import DiatonicKeyboard
 from eartraining.ui import is_key_event
@@ -94,7 +94,7 @@ class ScalePlayer:
                 return Note(self.note(a))
 
         blonk = Sequence([x(a, b) for a, b in zip(asked, answered)])
-        play(midi_out, (blonk + silence(0.25)).render(60, 120))
+        play(midi_out, (blonk + rest(0.25)).render(60, 120))
 
 
 class UI:

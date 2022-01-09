@@ -5,6 +5,7 @@ from typing import Tuple
 
 from eartraining.midi import Note
 from eartraining.midi import Parallel
+from eartraining.midi import Rest
 from eartraining.midi import Sequence
 
 
@@ -18,11 +19,7 @@ def melody(pitches):
     return Sequence([Note(n) if n is not None else Rest() for n in pitches])
 
 
-def sequence(*things):
-    return Sequence(things)
-
-
-def silence(duration):
+def rest(duration):
     "Since rests get smooshed out at the end of lines."
     return Note(0, duration, 0)
 
@@ -58,19 +55,38 @@ class Scale:
     def one_octave(self):
         return self.notes(range(1, len(self.pattern) + 1))
 
+    @property
+    def degrees(self):
+        "Degrees of scale."
+        return list(range(1, len(self.pattern) + 1))
+
     def note(self, n):
         "Return the note of the scale at a given degree."
         octave, degree = divmod(n - 1, len(self.pattern))
         return self.root + self.pattern[degree] + (octave * 12)
 
-    def notes(self, steps):
-        return [self.note(s) for s in steps]
+    def notes(self, ns):
+        "List of notes corresponding to scale degrees."
+        return [self.note(n) for n in ns]
+
+    def diatonic_chord(self, degree, notes):
+        "Diatonic chord built on the given degree with the given number of notes."
+        return tuple(self.note(degree + i * 2) for i in range(notes))
 
     def triad(self, n):
-        return tuple(self.note(d) for d in range(n, n + 6, 2))
+        "Diatonic triad."
+        return self.diatonic_chord(n, 3)
 
     def seventh_chord(self, n):
-        return tuple(self.note(d) for d in range(n, n + 8, 2))
+        "Diatonic seventh chord."
+        return self.diatonic_chord(n, 4)
+
+
+class Scales:
+
+    major = Scale((0, 2, 4, 5, 7, 9, 11))
+    minor = Scale((0, 2, 3, 5, 7, 8, 10))
+    pentatonic_major = Scale((0, 2, 4, 7, 9))
 
 
 def inversion(chord, inversion):
@@ -177,10 +193,10 @@ def chord_intervals(chord):
 
 if __name__ == "__main__":
 
-    s = scale((0, 2, 4, 5, 7, 9, 11))
+    s = Scales.major
 
-    for i in range(24):
-        triad = s.triad(i)
+    for d in s.degrees:
+        triad = s.triad(d)
         print(
-            f"{i}: {s.note(i)} -> {triad} / {s.seventh_chord(i)} ({roman(i, triad)}) ({chord_intervals(triad)})"
+            f"{d}: {s.note(d)} -> {triad} / {s.seventh_chord(d)} ({roman(d, triad)}) ({chord_intervals(triad)})"
         )

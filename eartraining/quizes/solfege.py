@@ -9,7 +9,7 @@ from eartraining.app import QuizUI
 from eartraining.midi import play
 from eartraining.music import Scale
 from eartraining.music import melody
-from eartraining.music import silence
+from eartraining.music import rest
 
 solfege = ("Do", "Re", "Mi", "Fa", "Sol", "La", "Ti", "Do")
 
@@ -25,7 +25,7 @@ class SolfegeQuestion(Question):
 
     def after_correct(self, midi_out):
         pitches = [self.scale.note(d) for d in range(self.degree, 0, -1)]
-        midi = melody(pitches).rhythm(1 / 8) + silence(1 / 4)
+        midi = melody(pitches).rhythm(1 / 8) + rest(1 / 4)
         play(midi_out, midi.render(60, 120))
 
 

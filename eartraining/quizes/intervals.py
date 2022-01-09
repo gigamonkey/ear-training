@@ -8,7 +8,7 @@ from eartraining.app import QuizUI
 from eartraining.midi import play
 from eartraining.music import intervals
 from eartraining.music import melody
-from eartraining.progressive import ProgressiveQuiz, FixedQuiz
+from eartraining.progressive import FixedQuiz
 
 speed = 300
 
@@ -58,5 +58,5 @@ if __name__ == "__main__":
 
     templates = [IntervalTemplate(d) for d in sorted(distances)]
 
-    #QuizUI("Intervals", ProgressiveQuiz(templates, arg_generator(), 3)).run()
+    # QuizUI("Intervals", ProgressiveQuiz(templates, arg_generator(), 3)).run()
     QuizUI("Intervals", FixedQuiz(templates, arg_generator())).run()

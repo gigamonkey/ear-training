@@ -36,15 +36,12 @@ establish_key = (
 
 
 class Question:
-    def play(self, midi_out):
+    def play(self, midi_out, root):
         "Play the question."
 
-    def hint(self, midi_out):
+    def hint(self, midi_out, root):
         "Play a hint for the question. By default is just the question again."
-        self.play(midi_out)
-
-    def after_correct(self, midi_out):
-        "Some quizes want to play something after a correct answer."
+        self.play(midi_out, root)
 
 
 @dataclass
@@ -196,7 +193,7 @@ class QuizUI:
             self.running = False
 
         elif is_replay(event):
-            self.quiz.current_question.play(self.midi_out)
+            self.quiz.current_question.play(self.midi_out, self.quiz.root)
 
         elif is_replay_with_hint(event):
             self.quiz.current_question.hint(self.midi_out)
@@ -206,17 +203,16 @@ class QuizUI:
 
         elif event.type == QuizUI.NEW_QUESTION:
             self.draw()
-            event.question.play(self.midi_out)
+            event.question.play(self.midi_out, self.quiz.root)
 
         elif event.type == QuizUI.CORRECT_ANSWER:
             self.play_and_wait(self.correct_sound)
             self.draw()
-            event.question.after_correct(self.midi_out)
 
         elif event.type == QuizUI.WRONG_ANSWER:
             self.play_and_wait(self.wrong_sound)
             self.draw()
-            event.question.play(self.midi_out)
+            event.question.play(self.midi_out, self.quiz.root)
 
         elif event.type == Button.BUTTON_PRESSED:
             print(f"Got button presssed")
@@ -224,10 +220,13 @@ class QuizUI:
             if event.button.state is ButtonState.WRONG:
                 # We get here when the button has already been marked
                 # wrong previously.
-                event.button.question.play(self.midi_out)
+                event.button.question.play(self.midi_out, self.quiz.root)
             else:
                 print(f"About to check answer")
-                if not self.quiz.check_answer(event.button.question):
+                if self.quiz.check_answer(event.button.question):
+                    for b in self.grid.buttons:
+                        b.state = ButtonState.ACTIVE
+                else:
                     event.button.state = ButtonState.WRONG
                     event.button.draw()
 
