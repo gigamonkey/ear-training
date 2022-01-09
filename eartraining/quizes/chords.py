@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import argparse
 import random
 from dataclasses import dataclass
 from dataclasses import replace
@@ -75,21 +76,54 @@ class ChordQuestion(Question):
         return other
 
 
-def root_generator():
+def growing_root_generator():
+    low = random.randrange(60, 60 + 12)
+    high = low
+    count = 0
     while True:
-        yield [random.randint(60 - 12, 60 + 12)]
+        count += 1
+        yield [random.randint(low, high)]
+        if count % 10 == 0:
+            if random.choice((True, False)):
+                low -= 1
+            else:
+                high += 1
+            print(f"range {low} to {high} ({high - low} notes)")
+
+
+def root_generator(octaves):
+
+    down = octaves // 2
+    up = octaves - down
+
+    low = 60 - (12 * down)
+    high = 60 + (12 * up)
+
+    print(f"low: {low}; high: {high}")
+    while True:
+        yield [random.randint(low, high)]
 
 
 if __name__ == "__main__":
 
-    major7minor7 = [(0, 4, 7, 11), (0, 3, 7, 10)]
-    triads = [c for c in chord_types if len(c) == 3]
-    sevenths = [c for c in chord_types if len(c) == 4]
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("quiz", help="Which quiz to run.")
+    parser.add_argument("--octaves", type=int, default=1, help="Number of octaves.")
 
-    to_ask = sorted(sevenths, reverse=True)
+    args = parser.parse_args()
+
+    match args.quiz:
+        case "m7M7":
+            to_ask = [(0, 4, 7, 11), (0, 3, 7, 10)]
+        case "triads":
+            to_ask = [c for c in chord_types if len(c) == 3]
+        case "sevenths":
+            to_ask = [c for c in chord_types if len(c) == 4]
+        case other:
+            exit(f"No quiz {other}")
 
     # templates = [ChordTemplate(c) for c in chord_types.keys()]
-    templates = [ChordTemplate(c) for c in to_ask]
+    templates = [ChordTemplate(c) for c in sorted(to_ask, reverse=True)]
 
     # QuizUI("Chords", PlusMinusProgressiveQuiz(templates, root_generator(), 3)).run()
-    QuizUI("Chords", FixedQuiz(templates, root_generator())).run()
+    QuizUI("Chords", FixedQuiz(templates, root_generator(args.octaves))).run()
