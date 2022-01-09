@@ -99,7 +99,7 @@ class Button:
         elif self.state == ButtonState.WRONG:
             return wrong_button_color
 
-    def draw(self):
+    def draw(self, update=False):
         surface = pygame.Surface(self.rect.size)
         pygame.draw.rect(
             surface,
@@ -113,7 +113,8 @@ class Button:
 
         surface.blit(text, (x, y))
         self.surface.blit(surface, (self.rect.x, self.rect.y))
-        pygame.display.update(self.rect)
+        if update:
+            pygame.display.update(self.rect)
 
     def is_hit(self, pos):
         return self.rect.collidepoint(pos)
@@ -194,13 +195,13 @@ class Grid:
         rows = len(grid.rows)
         cols = len(grid.rows[0].questions)
 
-        h = ((self.rect.height + self.gap) / rows) - self.gap
-        w = ((self.rect.width + self.gap) / cols) - self.gap
+        h = (self.rect.height - ((rows + 1) * self.gap)) / rows
+        w = (self.rect.width - ((cols + 1) * self.gap)) / cols
 
         def make_button(q, x, y):
 
-            pos_x = self.rect.left + (x * (w + self.gap))
-            pos_y = self.rect.top + (y * (h + self.gap))
+            pos_x = self.rect.left + self.gap + (x * (w + self.gap))
+            pos_y = self.rect.top + +self.gap + (y * (h + self.gap))
 
             return Button(
                 self.surface, self.font, (pos_x, pos_y), (w, h), q, ButtonState.ACTIVE

@@ -44,9 +44,9 @@ class DiatonicChordQuiz(Quiz):
     def make_grid(self):
         return QuestionGrid(
             [
-                self.make_row(["I", "ii", "iii", "IV", "V", "vi", "vii°"], 3),
+                self.make_row(["Maj", "min", "min", "Maj", "Maj", "min", "dim"], 3),
                 self.make_row(
-                    ["IΔ7", "ii7", "iii7", "IVΔ7", "V7", "vi7", "viim7♭5"], 4
+                    ["Maj7", "min7", "min7", "Maj7", "7", "min7", "min7♭5"], 4
                 ),
             ]
         )
@@ -60,4 +60,4 @@ class DiatonicChordQuiz(Quiz):
 
 if __name__ == "__main__":
 
-    QuizUI("GridTest", DiatonicChordQuiz(Scales.major, 60)).run()
+    QuizUI("Diatonic chords", DiatonicChordQuiz(Scales.major, 60)).run()

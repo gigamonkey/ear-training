@@ -100,7 +100,6 @@ class Quiz:
         pygame.event.post(pygame.event.Event(QuizUI.NEW_QUESTION, question=question))
 
     def check_answer(self, choice):
-        print(f"Checking answer for {choice} with current: {self.current_question}")
         self.update(choice, self.current_question)
 
         if choice is self.current_question:
@@ -145,7 +144,7 @@ class QuizUI:
         status_font = pygame.freetype.SysFont("helveticaneue", 14)
         status_height = 20
         status_padding = 5
-        button_size = 100
+        button_size = 120
         self.size = (
             (c * button_size) + status_height + status_padding,
             r * button_size,
@@ -215,20 +214,18 @@ class QuizUI:
             event.question.play(self.midi_out, self.quiz.root)
 
         elif event.type == Button.BUTTON_PRESSED:
-            print(f"Got button presssed")
             # FIXME: this should probably live in the Button itself.
             if event.button.state is ButtonState.WRONG:
                 # We get here when the button has already been marked
                 # wrong previously.
                 event.button.question.play(self.midi_out, self.quiz.root)
             else:
-                print(f"About to check answer")
                 if self.quiz.check_answer(event.button.question):
                     for b in self.grid.buttons:
                         b.state = ButtonState.ACTIVE
                 else:
                     event.button.state = ButtonState.WRONG
-                    event.button.draw()
+                    event.button.draw(update=True)
 
     def draw(self):
         background = pygame.Surface(self.size)
