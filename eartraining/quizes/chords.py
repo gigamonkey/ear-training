@@ -12,6 +12,7 @@ from eartraining.midi import play
 from eartraining.music import chord
 from eartraining.music import chord_types
 from eartraining.music import melody
+from eartraining.music import sequence
 from eartraining.progressive import FixedQuiz
 
 
@@ -40,7 +41,10 @@ class ChordQuestion(Question):
         play(midi_out, chord(self.notes).render(self.root, 120))
 
     def hint(self, midi_out):
-        play(midi_out, melody(self.notes).render(self.root, 120))
+        play(
+            midi_out,
+            sequence(melody(self.notes), chord(self.notes)).render(self.root, 120),
+        )
 
     def align(self, other):
         # Find the root for the other chord such that common

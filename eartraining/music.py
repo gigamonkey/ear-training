@@ -18,6 +18,10 @@ def melody(pitches):
     return Sequence([Note(n) if n is not None else Rest() for n in pitches])
 
 
+def sequence(*things):
+    return Sequence(things)
+
+
 def silence(duration):
     "Since rests get smooshed out at the end of lines."
     return Note(0, duration, 0)
